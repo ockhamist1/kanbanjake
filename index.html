@@ -12,13 +12,17 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f7f7f5; color: #37352f; }
         
         #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+        
+        /* New Search Bar Styling */
+        #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none; }
+        #global-search:focus { border-color: #888; box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
+
         .wiki-link { display: block; padding: 8px; margin-bottom: 5px; border-radius: 4px; text-decoration: none; color: #37352f; cursor: pointer; transition: 0.2s;}
         .wiki-link:hover { background-color: #dfdfdf; }
         .active-nav { background-color: #d3d3d3; font-weight: 600; }
         
         #main-content { flex-grow: 1; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
         
-        /* Views */
         #kanban-view { display: flex; flex-direction: column; flex-grow: 1; }
         #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;}
 
@@ -40,7 +44,6 @@
         .tag-container { display: flex; gap: 5px; margin-bottom: 8px; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
         
-        /* Shared Editor Styles (Used in Modal and Full Page Wiki) */
         .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px;}
         .mode-btn.active { background: #ebebec; font-weight: 600; border-color: #bbb;}
         .editor-textarea { flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa; margin-top: 15px;}
@@ -51,7 +54,6 @@
         .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 20px; align-self: flex-end;}
         .save-btn:hover { background: #2f2d28; }
 
-        /* Modal Specific */
         #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;}
@@ -63,9 +65,11 @@
 <body>
 
     <div id="sidebar">
+        <input type="text" id="global-search" placeholder="Search tasks & pages...">
+
         <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
         
-        <h3 style="margin-top: 30px; margin-bottom: 10px; font-size: 14px; color: #777;">WIKI PAGES</h3>
+        <h3 style="margin-top: 10px; margin-bottom: 10px; font-size: 14px; color: #777;">WIKI PAGES</h3>
         <div id="wiki-list">
             </div>
         
@@ -107,10 +111,8 @@
                     <button id="wiki-btn-preview" class="mode-btn">Preview</button>
                 </div>
             </div>
-            
             <textarea id="wiki-page-notes" class="editor-textarea" placeholder="Start writing your wiki page here using Markdown..."></textarea>
             <div id="wiki-page-preview" class="preview-area"></div>
-            
             <button id="wiki-save-btn" class="save-btn">Save Page</button>
         </div>
 
@@ -147,135 +149,70 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        // Two Collections Now!
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        // --- NAVIGATION & VIEW SWITCHING ---
+        // --- GLOBAL VARIABLES ---
+        let draggedCardId = null;
+        let currentEditingId = null;
+        let currentWikiId = null;
+        let currentFilter = 'All'; 
+        let currentSearchTerm = ''; // Tracks what is in the search box
+
+        // --- DOM ELEMENTS ---
         const kanbanView = document.getElementById('kanban-view');
         const wikiView = document.getElementById('wiki-view');
         const navKanban = document.getElementById('nav-kanban');
-        let currentWikiId = null;
+        const searchInput = document.getElementById('global-search');
 
+        // --- NAVIGATION LOGIC ---
         navKanban.addEventListener('click', () => {
             kanbanView.style.display = 'flex';
             wikiView.style.display = 'none';
-            
             navKanban.classList.add('active-nav');
             document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
         });
 
-        // --- WIKI LOGIC ---
-        const wikiTitle = document.getElementById('wiki-page-title');
-        const wikiNotes = document.getElementById('wiki-page-notes');
-        const wikiPreview = document.getElementById('wiki-page-preview');
-        const wikiBtnEdit = document.getElementById('wiki-btn-edit');
-        const wikiBtnPreview = document.getElementById('wiki-btn-preview');
-
-        // Toggle Edit/Preview for Full Page Wiki
-        wikiBtnEdit.addEventListener('click', () => {
-            wikiBtnEdit.classList.add('active');
-            wikiBtnPreview.classList.remove('active');
-            wikiNotes.style.display = 'block';
-            wikiPreview.style.display = 'none';
-        });
-
-        wikiBtnPreview.addEventListener('click', () => {
-            wikiBtnPreview.classList.add('active');
-            wikiBtnEdit.classList.remove('active');
-            wikiNotes.style.display = 'none';
-            wikiPreview.style.display = 'block';
-            wikiPreview.innerHTML = marked.parse(wikiNotes.value); 
-        });
-
-        // Listen for Wiki Pages from Database
-        onSnapshot(wikiCol, (snapshot) => {
-            const wikiList = document.getElementById('wiki-list');
-            wikiList.innerHTML = ''; // Clear old list
-
-            snapshot.forEach((docSnap) => {
-                const page = docSnap.data();
-                const link = document.createElement('div');
-                link.className = 'wiki-link dynamic-wiki-link';
-                link.innerText = `📄 ${page.title}`;
-                
-                // When a sidebar wiki link is clicked...
-                link.addEventListener('click', () => {
-                    kanbanView.style.display = 'none';
-                    wikiView.style.display = 'flex';
-                    
-                    navKanban.classList.remove('active-nav');
-                    document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
-                    link.classList.add('active-nav');
-
-                    currentWikiId = docSnap.id;
-                    wikiTitle.innerText = page.title;
-                    wikiNotes.value = page.content || '';
-                    
-                    // Default to preview mode if it has text, otherwise edit mode
-                    if(page.content) {
-                        wikiBtnPreview.click();
-                    } else {
-                        wikiBtnEdit.click();
-                    }
-                });
-
-                wikiList.appendChild(link);
-            });
-        });
-
-        // Create New Wiki Page
-        document.getElementById('add-wiki-btn').addEventListener('click', async () => {
-            const title = prompt("What is the title of the new Wiki page?");
-            if (title) {
-                await addDoc(wikiCol, { title: title, content: '' });
-            }
-        });
-
-        // Save Full Wiki Page
-        document.getElementById('wiki-save-btn').addEventListener('click', async () => {
-            if (currentWikiId) {
-                const docRef = doc(db, 'wiki', currentWikiId);
-                await updateDoc(docRef, { content: wikiNotes.value });
-                
-                // Give a little visual feedback
-                const btn = document.getElementById('wiki-save-btn');
-                btn.innerText = "Saved!";
-                btn.style.backgroundColor = "#15803d";
-                setTimeout(() => {
-                    btn.innerText = "Save Page";
-                    btn.style.backgroundColor = "#37352f";
-                }, 2000);
-            }
-        });
-
-
-        // --- ORIGINAL KANBAN LOGIC --- (Untouched and functional)
-        let draggedCardId = null;
-        let currentEditingId = null;
-        let currentFilter = 'All'; 
-        
-        const modal = document.getElementById('editor-modal');
-        const modalNotes = document.getElementById('modal-notes');
-        const modalPreview = document.getElementById('modal-preview');
-        const modalBtnEdit = document.getElementById('modal-btn-edit');
-        const modalBtnPreview = document.getElementById('modal-btn-preview');
-
-        // Kanban Filter Logic
-        const filterButtons = document.querySelectorAll('.filter-btn');
+        // --- CORE FILTERING ENGINE (Handles both Tags & Search) ---
         function applyFilters() {
             const filterValue = currentFilter.toLowerCase();
+            const searchValue = currentSearchTerm.toLowerCase();
+
+            // 1. Filter Kanban Cards
             document.querySelectorAll('.card').forEach(card => {
-                if (filterValue === 'all') { card.style.display = 'block'; } 
-                else {
-                    const tagElement = card.querySelector('.tag');
-                    const tagText = tagElement ? tagElement.innerText.toLowerCase() : '';
-                    card.style.display = tagText === filterValue ? 'block' : 'none';
+                const tagElement = card.querySelector('.tag');
+                const tagText = tagElement ? tagElement.innerText.toLowerCase() : '';
+                const cardText = card.innerText.toLowerCase(); // Searches the title and tag
+
+                const matchesTag = (filterValue === 'all' || tagText === filterValue);
+                const matchesSearch = cardText.includes(searchValue);
+
+                if (matchesTag && matchesSearch) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // 2. Filter Wiki Links in Sidebar
+            document.querySelectorAll('.dynamic-wiki-link').forEach(link => {
+                const linkText = link.innerText.toLowerCase();
+                if (linkText.includes(searchValue)) {
+                    link.style.display = 'block';
+                } else {
+                    link.style.display = 'none';
                 }
             });
         }
 
+        // --- SEARCH EVENT LISTENER ---
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value;
+            applyFilters();
+        });
+
+        // --- TAG FILTER EVENT LISTENERS ---
+        const filterButtons = document.querySelectorAll('.filter-btn');
         filterButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 filterButtons.forEach(b => b.classList.remove('active-filter'));
@@ -285,7 +222,75 @@
             });
         });
 
-        // Modal Edit/Preview Logic
+        // --- WIKI LOGIC ---
+        const wikiTitle = document.getElementById('wiki-page-title');
+        const wikiNotes = document.getElementById('wiki-page-notes');
+        const wikiPreview = document.getElementById('wiki-page-preview');
+        const wikiBtnEdit = document.getElementById('wiki-btn-edit');
+        const wikiBtnPreview = document.getElementById('wiki-btn-preview');
+
+        wikiBtnEdit.addEventListener('click', () => {
+            wikiBtnEdit.classList.add('active'); wikiBtnPreview.classList.remove('active');
+            wikiNotes.style.display = 'block'; wikiPreview.style.display = 'none';
+        });
+
+        wikiBtnPreview.addEventListener('click', () => {
+            wikiBtnPreview.classList.add('active'); wikiBtnEdit.classList.remove('active');
+            wikiNotes.style.display = 'none'; wikiPreview.style.display = 'block';
+            wikiPreview.innerHTML = marked.parse(wikiNotes.value); 
+        });
+
+        onSnapshot(wikiCol, (snapshot) => {
+            const wikiList = document.getElementById('wiki-list');
+            wikiList.innerHTML = ''; 
+
+            snapshot.forEach((docSnap) => {
+                const page = docSnap.data();
+                const link = document.createElement('div');
+                link.className = 'wiki-link dynamic-wiki-link';
+                link.innerText = `📄 ${page.title}`;
+                
+                link.addEventListener('click', () => {
+                    kanbanView.style.display = 'none';
+                    wikiView.style.display = 'flex';
+                    navKanban.classList.remove('active-nav');
+                    document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
+                    link.classList.add('active-nav');
+
+                    currentWikiId = docSnap.id;
+                    wikiTitle.innerText = page.title;
+                    wikiNotes.value = page.content || '';
+                    
+                    if(page.content) { wikiBtnPreview.click(); } else { wikiBtnEdit.click(); }
+                });
+
+                wikiList.appendChild(link);
+            });
+            applyFilters(); // Re-apply search if new wiki page comes in
+        });
+
+        document.getElementById('add-wiki-btn').addEventListener('click', async () => {
+            const title = prompt("What is the title of the new Wiki page?");
+            if (title) { await addDoc(wikiCol, { title: title, content: '' }); }
+        });
+
+        document.getElementById('wiki-save-btn').addEventListener('click', async () => {
+            if (currentWikiId) {
+                await updateDoc(doc(db, 'wiki', currentWikiId), { content: wikiNotes.value });
+                const btn = document.getElementById('wiki-save-btn');
+                btn.innerText = "Saved!"; btn.style.backgroundColor = "#15803d";
+                setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = "#37352f"; }, 2000);
+            }
+        });
+
+
+        // --- KANBAN LOGIC --- 
+        const modal = document.getElementById('editor-modal');
+        const modalNotes = document.getElementById('modal-notes');
+        const modalPreview = document.getElementById('modal-preview');
+        const modalBtnEdit = document.getElementById('modal-btn-edit');
+        const modalBtnPreview = document.getElementById('modal-btn-preview');
+
         modalBtnEdit.addEventListener('click', () => {
             modalBtnEdit.classList.add('active'); modalBtnPreview.classList.remove('active');
             modalNotes.style.display = 'block'; modalPreview.style.display = 'none';
@@ -297,7 +302,6 @@
             modalPreview.innerHTML = marked.parse(modalNotes.value); 
         });
 
-        // Listen for Kanban Tasks
         onSnapshot(tasksCol, (snapshot) => {
             document.getElementById('todo-list').innerHTML = ''; document.getElementById('doing-list').innerHTML = ''; document.getElementById('done-list').innerHTML = '';
             snapshot.forEach((docSnap) => {
@@ -321,10 +325,9 @@
                 if (task.status === 'doing') document.getElementById('doing-list').appendChild(card);
                 if (task.status === 'done') document.getElementById('done-list').appendChild(card);
             });
-            applyFilters();
+            applyFilters(); // Apply search when data loads
         });
 
-        // Drag and Drop Logic
         document.querySelectorAll('.card-list').forEach(list => {
             list.addEventListener('dragover', e => e.preventDefault());
             list.addEventListener('drop', e => {
@@ -334,7 +337,6 @@
             });
         });
 
-        // Add Kanban Task
         document.getElementById('add-btn').addEventListener('click', async () => {
             const text = prompt("What is the new task?");
             if (text) {
@@ -343,7 +345,6 @@
             }
         });
 
-        // Save Kanban Modal
         document.getElementById('close-modal').addEventListener('click', () => { modal.style.display = 'none'; });
         document.getElementById('save-notes').addEventListener('click', async () => {
             if (currentEditingId) {
