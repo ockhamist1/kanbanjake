@@ -158,12 +158,11 @@
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false;
+        let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false;
 
-        // --- AUTH ACTION ---
+        // --- AUTH ---
         document.getElementById('login-btn').onclick = async () => {
-            try { await signInWithPopup(auth, provider); } 
-            catch (e) { console.error("Login Failure:", e); alert("Login blocked. Check popup settings."); }
+            try { await signInWithPopup(auth, provider); } catch(e) { alert("Shields jammed. Enable popups."); }
         };
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
@@ -193,21 +192,19 @@
                 container.innerHTML = '';
                 items.forEach((item, i) => {
                     if (i >= 20) return;
-                    const title = item.querySelector("title").textContent;
                     const desc = item.querySelector("description").textContent;
-                    const link = item.querySelector("link").textContent;
-                    
-                    // SURGICAL IMAGE SCAN
-                    let imgUrl = `https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80&sig=${i}`;
                     const htmlDoc = new DOMParser().parseFromString(desc, "text/html");
                     const img = htmlDoc.querySelector("img");
+                    
+                    // TARGET UNIQUE AP THUMBNAILS
+                    let imgUrl = `https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80&sig=${i + Date.now()}`;
                     if (img && img.src && !img.src.includes('pixel')) imgUrl = img.src;
 
                     const card = document.createElement('div'); card.className = 'news-card';
-                    card.innerHTML = `<img class="news-img" src="${imgUrl}" onerror="this.src='https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80&sig=${i}'"><div class="news-body"><div class="news-title">${title}</div><a href="${link}" target="_blank" class="news-link">Full Intel →</a></div>`;
+                    card.innerHTML = `<img class="news-img" src="${imgUrl}"><div class="news-body"><div class="news-title">${item.querySelector("title").textContent}</div><a href="${item.querySelector("link").textContent}" target="_blank" class="news-link">Full Intel →</a></div>`;
                     container.appendChild(card);
                 });
-            } catch (e) { container.innerHTML = '<p style="color:red;">Interference detected. Signal lost.</p>'; }
+            } catch (e) { container.innerHTML = '<p style="color:red;">Interference detected.</p>'; }
         }
 
         const showView = (view) => {
@@ -244,11 +241,9 @@
             });
         }
 
-        // --- INITIALIZE DRAG & DROP ONCE ---
         ['todo-list', 'doing-list', 'done-list'].forEach(id => {
             new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: (evt) => {
-                const newStatus = evt.to.parentElement.getAttribute('data-status');
-                updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: newStatus });
+                updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: evt.to.parentElement.getAttribute('data-status') });
             }});
         });
 
@@ -259,7 +254,6 @@
                 item.onclick = () => { curWikiId = d.id; isEditing = false; showView(document.getElementById('wiki-content-view')); document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-notes').value = d.data().content || ''; document.getElementById('wiki-mode-preview').click(); }; 
                 list.appendChild(item);
             });
-            allWiki = snap.docs;
         });
 
         onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderBoard(); });
@@ -284,7 +278,6 @@
         document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(wikiCol, { title: t, content: '', lastEdited: serverTimestamp() }); };
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(tasksCol, { text: t, status: 'todo' }); };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display = 'none'; isEditing = false; };
-        document.getElementById('wiki-export-pdf').onclick = () => window.print();
     </script>
 </body>
 </html>
