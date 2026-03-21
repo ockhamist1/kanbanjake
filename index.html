@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jake's Kanban Wiki</title>
+    <style>
+        /* CSS Styling - This makes it look like Notion */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #f7f7f5;
+            color: #37352f;
+        }
+
+        /* Sidebar (The Wiki Navigation) */
+        #sidebar {
+            width: 250px;
+            background-color: #ebebec;
+            padding: 20px;
+            border-right: 1px solid #e0e0e0;
+        }
+        
+        .wiki-link {
+            display: block;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #37352f;
+            cursor: pointer;
+        }
+        
+        .wiki-link:hover {
+            background-color: #e0e0e0;
+        }
+
+        /* Main Content Area */
+        #main-content {
+            flex-grow: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tag Filters */
+        #filters {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 5px 12px;
+            border: 1px solid #d3d3d3;
+            border-radius: 15px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .filter-btn:hover {
+            background: #efefef;
+        }
+
+        /* Kanban Board */
+        #kanban-board {
+            display: flex;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .column {
+            background-color: transparent;
+            width: 33%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .column-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Kanban Cards */
+        .card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            cursor: pointer; /* Prepping for drag-and-drop */
+        }
+
+        .card:hover {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        /* Visual Tags */
+        .tag-container {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        /* Tag Colors */
+        .tag-blue { background-color: #e3e2fe; color: #4338ca; }
+        .tag-orange { background-color: #ffebd2; color: #c2410c; }
+        .tag-green { background-color: #dcfce7; color: #15803d; }
+
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h3>Wiki Pages</h3>
+        <div class="wiki-link">📄 Revelation Notes</div>
+        <div class="wiki-link">📄 Process Workflows</div>
+        <div class="wiki-link">📄 App Ideas</div>
+    </div>
+
+    <div id="main-content">
+        <h2>Kanban Board</h2>
+        
+        <div id="filters">
+            <button class="filter-btn">All</button>
+            <button class="filter-btn">Theology</button>
+            <button class="filter-btn">Mortgage</button>
+            <button class="filter-btn">Gaming</button>
+        </div>
+
+        <div id="kanban-board">
+            
+            <div class="column">
+                <div class="column-header">To Do <span>3</span></div>
+                
+                <div class="card">
+                    <div class="tag-container">
+                        <span class="tag tag-blue">Theology</span>
+                    </div>
+                    Review G.K. Beale commentary chapter for Sunday School
+                </div>
+
+                <div class="card">
+                    <div class="tag-container">
+                        <span class="tag tag-green">Mortgage</span>
+                    </div>
+                    Audit pending loan applications
+                </div>
+                
+                <button style="border:none; background:none; color:gray; cursor:pointer; text-align:left; padding:5px;">+ New Task</button>
+            </div>
+
+            <div class="column">
+                <div class="column-header">In Progress <span>1</span></div>
+                
+                <div class="card">
+                    <div class="tag-container">
+                        <span class="tag tag-orange">Gaming</span>
+                    </div>
+                    Optimize base defenses in STFC
+                </div>
+            </div>
+
+            <div class="column">
+                <div class="column-header">Done <span>0</span></div>
+                </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
