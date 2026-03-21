@@ -4,178 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jake's Kanban Wiki</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         /* CSS Styling */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            background-color: #f7f7f5;
-            color: #37352f;
+            margin: 0; display: flex; height: 100vh; background-color: #f7f7f5; color: #37352f;
         }
 
         #sidebar {
-            width: 250px;
-            background-color: #ebebec;
-            padding: 20px;
-            border-right: 1px solid #e0e0e0;
+            width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0;
         }
         
         .wiki-link {
-            display: block;
-            padding: 8px;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            text-decoration: none;
-            color: #37352f;
-            cursor: pointer;
+            display: block; padding: 8px; margin-bottom: 5px; border-radius: 4px; text-decoration: none; color: #37352f; cursor: pointer;
         }
-        
         .wiki-link:hover { background-color: #e0e0e0; }
 
         #main-content {
-            flex-grow: 1;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
+            flex-grow: 1; padding: 30px; display: flex; flex-direction: column;
         }
 
-        #filters {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
+        #filters { margin-bottom: 20px; display: flex; gap: 10px; }
 
         .filter-btn {
-            padding: 5px 12px;
-            border: 1px solid #d3d3d3;
-            border-radius: 15px;
-            background: white;
-            cursor: pointer;
-            font-size: 14px;
+            padding: 5px 12px; border: 1px solid #d3d3d3; border-radius: 15px; background: white; cursor: pointer; font-size: 14px;
         }
-        
         .filter-btn:hover { background: #efefef; }
 
-        #kanban-board {
-            display: flex;
-            gap: 20px;
-            flex-grow: 1;
-        }
+        #kanban-board { display: flex; gap: 20px; flex-grow: 1; }
 
-        .column {
-            background-color: transparent;
-            width: 33%;
-            display: flex;
-            flex-direction: column;
-        }
+        .column { background-color: transparent; width: 33%; display: flex; flex-direction: column; }
 
-        .column-header {
-            font-weight: 600;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-        .card-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-height: 200px;
-            flex-grow: 1;
-        }
+        .card-list { display: flex; flex-direction: column; gap: 10px; min-height: 200px; flex-grow: 1; }
 
         .card {
-            background-color: white;
-            padding: 15px;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
-            cursor: grab;
+            background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab;
         }
-
         .card:active { cursor: grabbing; }
         .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
-        .dragging {
-            opacity: 0.5;
-            border: 2px dashed #4338ca;
-        }
+        .dragging { opacity: 0.5; border: 2px dashed #4338ca; }
 
-        .tag-container {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 8px;
-        }
-
-        .tag {
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: 500;
-        }
-
+        .tag-container { display: flex; gap: 5px; margin-bottom: 8px; }
+        .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
         .tag-blue { background-color: #e3e2fe; color: #4338ca; }
 
-        /* The Editor Modal Styling */
+        /* Modal Styling Updates */
         #editor-modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000;
         }
 
         .modal-content {
-            background: white;
-            width: 650px;
-            max-width: 90%;
-            height: 75vh;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;}
         #modal-title { margin: 0; font-size: 24px; }
         
-        #close-modal {
-            background: none; border: none; font-size: 28px; cursor: pointer; color: #888;
-        }
+        .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px;}
+        .mode-btn.active { background: #ebebec; font-weight: 600; border-color: #bbb;}
+        
+        #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; margin-left: 10px;}
         #close-modal:hover { color: #333; }
 
         #modal-notes {
-            flex-grow: 1;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 16px;
-            resize: none;
-            outline: none;
-            background-color: #fafafa;
+            flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa;
         }
-        
         #modal-notes:focus { background-color: white; border-color: #ccc; }
 
-        .modal-footer { text-align: right; margin-top: 20px; }
-
-        #save-notes {
-            background: #37352f; color: white; border: none; padding: 10px 20px;
-            border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;
+        /* The new formatted preview area */
+        #modal-preview {
+            display: none; flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow-y: auto; background-color: white; line-height: 1.6;
         }
+        #modal-preview h1, #modal-preview h2, #modal-preview h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        #modal-preview ul { padding-left: 20px; }
+
+        .modal-footer { text-align: right; margin-top: 20px; }
+        #save-notes { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
         #save-notes:hover { background: #2f2d28; }
 
     </style>
@@ -201,12 +111,10 @@
                 <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:white; border:1px solid #ccc; border-radius:4px; padding:2px 8px;">+ New</button></div>
                 <div class="card-list" id="todo-list"></div>
             </div>
-
             <div class="column" data-status="doing">
                 <div class="column-header">In Progress</div>
                 <div class="card-list" id="doing-list"></div>
             </div>
-
             <div class="column" data-status="done">
                 <div class="column-header">Done</div>
                 <div class="card-list" id="done-list"></div>
@@ -218,9 +126,16 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modal-title">Task Title</h2>
-                <button id="close-modal">&times;</button>
+                <div>
+                    <button id="btn-edit" class="mode-btn active">Edit</button>
+                    <button id="btn-preview" class="mode-btn">Preview</button>
+                    <button id="close-modal">&times;</button>
+                </div>
             </div>
-            <textarea id="modal-notes" placeholder="Write your wiki notes here..."></textarea>
+            
+            <textarea id="modal-notes" placeholder="Write your wiki notes here using Markdown (e.g., # Heading, **bold**)..."></textarea>
+            <div id="modal-preview"></div>
+            
             <div class="modal-footer">
                 <button id="save-notes">Save Notes</button>
             </div>
@@ -245,12 +160,31 @@
         const tasksCol = collection(db, "tasks");
 
         let draggedCardId = null;
+        let currentEditingId = null;
         
-        // Modal Variables
         const modal = document.getElementById('editor-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalNotes = document.getElementById('modal-notes');
-        let currentEditingId = null;
+        const modalPreview = document.getElementById('modal-preview');
+        const btnEdit = document.getElementById('btn-edit');
+        const btnPreview = document.getElementById('btn-preview');
+
+        // Toggle Edit/Preview Logic
+        btnEdit.addEventListener('click', () => {
+            btnEdit.classList.add('active');
+            btnPreview.classList.remove('active');
+            modalNotes.style.display = 'block';
+            modalPreview.style.display = 'none';
+        });
+
+        btnPreview.addEventListener('click', () => {
+            btnPreview.classList.add('active');
+            btnEdit.classList.remove('active');
+            modalNotes.style.display = 'none';
+            modalPreview.style.display = 'block';
+            // This line converts your Markdown symbols into real formatting
+            modalPreview.innerHTML = marked.parse(modalNotes.value); 
+        });
 
         onSnapshot(tasksCol, (snapshot) => {
             document.getElementById('todo-list').innerHTML = '';
@@ -267,7 +201,6 @@
                 let tagHtml = `<div class="tag-container"><span class="tag tag-blue">${task.tag || 'General'}</span></div>`;
                 card.innerHTML = `${tagHtml}${task.text}`;
 
-                // Dragging Logic
                 card.addEventListener('dragstart', () => {
                     draggedCardId = docSnap.id;
                     card.classList.add('dragging');
@@ -277,11 +210,17 @@
                     draggedCardId = null;
                 });
 
-                // Click to Open Modal Logic
                 card.addEventListener('click', () => {
                     currentEditingId = docSnap.id;
                     modalTitle.innerText = task.text;
-                    modalNotes.value = task.notes || ''; // Load existing notes or leave blank
+                    modalNotes.value = task.notes || ''; 
+                    
+                    // Always reset to Edit mode when opening a card
+                    btnEdit.classList.add('active');
+                    btnPreview.classList.remove('active');
+                    modalNotes.style.display = 'block';
+                    modalPreview.style.display = 'none';
+
                     modal.style.display = 'flex';
                 });
 
@@ -306,28 +245,19 @@
         document.getElementById('add-btn').addEventListener('click', async () => {
             const text = prompt("What is the new task?");
             if (text) {
-                await addDoc(tasksCol, {
-                    text: text,
-                    status: 'todo',
-                    tag: 'General',
-                    notes: '' // Start with empty notes
-                });
+                await addDoc(tasksCol, { text: text, status: 'todo', tag: 'General', notes: '' });
             }
         });
 
-        // Modal Button Logic
-        document.getElementById('close-modal').addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
+        document.getElementById('close-modal').addEventListener('click', () => { modal.style.display = 'none'; });
 
         document.getElementById('save-notes').addEventListener('click', async () => {
             if (currentEditingId) {
                 const taskRef = doc(db, 'tasks', currentEditingId);
                 await updateDoc(taskRef, { notes: modalNotes.value });
-                modal.style.display = 'none'; // Close after saving
+                modal.style.display = 'none'; 
             }
         });
-
     </script>
 </body>
 </html>
