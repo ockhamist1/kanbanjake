@@ -38,10 +38,12 @@
         .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 20px; min-height: 100px; }
         
-        /* User-select none prevents the screen from highlighting text when you long-press a card */
-        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; user-select: none; -webkit-user-select: none; }
+        /* FIX: touch-action manipulation prevents the browser from fighting the drag script */
+        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
         .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
         .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; border: 2px dashed #4338ca; } 
+        /* FIX: Styling for the fake card that floats on your screen during mobile drag */
+        .sortable-fallback { opacity: 1 !important; transform: scale(1.05); cursor: grabbing; box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important; }
         
         .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
@@ -83,11 +85,9 @@
         /* --- MOBILE OPTIMIZATION --- */
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
-            /* Expanded height to 45vh to give more room */
             #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 45vh; overflow-y: auto; box-sizing: border-box; }
             #sidebar h3 { margin-top: 5px; margin-bottom: 5px; }
             
-            /* Changed from horizontal scrolling to a wrapping "cloud" of links */
             #wiki-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
             .wiki-link { display: inline-block; margin-bottom: 0; flex-shrink: 0; padding: 6px 10px; }
             
@@ -234,16 +234,18 @@
             }
         });
 
-        // --- FIX FOR MOBILE DRAGGING ---
+        // --- THE MASSIVE MOBILE DRAG FIX ---
         function initSortable() {
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 new Sortable(document.getElementById(id), {
                     group: 'kanban', 
                     animation: 150,
-                    delay: 250, // Increased to 250ms (a solid long-press)
+                    delay: 200, // Reduced slightly for a snappier pickup
                     delayOnTouchOnly: true, 
-                    touchStartThreshold: 5, // Forgives tiny finger movements during the long press
-                    fallbackOnBody: true, // CRITICAL FIX: Pops the card out of the scrolling column so it doesn't get hidden
+                    touchStartThreshold: 15, // FIX: Allows your finger to wiggle heavily without breaking the drag
+                    forceFallback: true, // FIX: Bypasses native Android browser dragging completely
+                    fallbackClass: "sortable-fallback", // Uses the special CSS styling to make the card float
+                    fallbackOnBody: true, // FIX: Pops the card over the columns so it doesn't get hidden
                     swapThreshold: 0.65,
                     onEnd: function (evt) {
                         const newStatus = evt.to.parentElement.getAttribute('data-status');
