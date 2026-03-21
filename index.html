@@ -6,7 +6,7 @@
     <title>Jake's Kanban Wiki</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
         /* --- BASE STYLING --- */
@@ -19,7 +19,6 @@
         #app-container { display: none; height: 100vh; width: 100%; flex-direction: row; }
 
         #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; transition: 0.3s; z-index: 10; }
-        
         #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 16px; outline: none; transition: 0.3s; }
         
         .wiki-link { display: block; padding: 8px; margin-bottom: 5px; border-radius: 4px; text-decoration: none; color: #37352f; cursor: pointer; transition: 0.2s;}
@@ -27,7 +26,6 @@
         .active-nav { background-color: #d3d3d3; font-weight: 600; }
         
         #main-content { flex-grow: 1; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
-        
         #kanban-view { display: flex; flex-direction: column; flex-grow: 1; height: 100%; }
         #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; transition: 0.3s; overflow-y: auto;}
 
@@ -40,9 +38,10 @@
         .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 20px; min-height: 100px; }
         
-        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: 0.3s; }
-        .card:active { cursor: grabbing; }
-        .dragging { opacity: 0.5; border: 2px dashed #4338ca; }
+        /* Notice cursor changed to grab, removed old dragging class */
+        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; }
+        .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; border: 2px dashed #4338ca; } /* SortableJS specific class */
         
         .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
@@ -81,33 +80,26 @@
         body.dark-mode .sidebar-action { border-color: #555; color: #ccc; }
         body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; }
 
-        /* --- MOBILE OPTIMIZATION (Fires on screens smaller than 768px) --- */
+        /* --- MOBILE OPTIMIZATION --- */
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
-            
-            /* Compact Sidebar for Top of Screen */
             #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 35vh; overflow-y: auto; box-sizing: border-box; }
             #sidebar h3 { margin-top: 5px; margin-bottom: 5px; }
             #wiki-list { display: flex; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; margin-bottom: 10px; }
-            .wiki-link { display: inline-block; margin-bottom: 0; }
+            .wiki-link { display: inline-block; margin-bottom: 0; flex-shrink: 0; } /* Ensured they don't squish */
             #add-wiki-btn { width: 100%; margin-top: 5px; margin-bottom: 10px; }
             .sidebar-action { padding: 8px; }
 
-            /* Kanban Swipe Layout */
             #main-content { padding: 15px; overflow-y: hidden; }
             #kanban-board { overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
             .column { min-width: 85vw; width: 85vw; flex-shrink: 0; scroll-snap-align: center; margin-right: 15px; }
             
-            /* Modal Fixes */
             .modal-content { width: 95%; height: 90vh; padding: 20px; box-sizing: border-box; }
             .modal-header { flex-direction: column; align-items: flex-start; gap: 10px; }
             #modal-title { font-size: 18px; }
             #close-modal { position: absolute; top: 15px; right: 15px; }
-            
-            /* Full Page Wiki Fixes */
             #wiki-view { padding: 20px; }
         }
-
     </style>
 </head>
 <body>
@@ -121,7 +113,6 @@
     </div>
 
     <div id="app-container">
-        
         <div id="sidebar">
             <input type="text" id="global-search" placeholder="Search tasks & pages...">
             <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
@@ -231,12 +222,32 @@
             if (user) {
                 loginScreen.style.display = 'none'; appContainer.style.display = 'flex';
                 startDatabaseListeners();
+                initSortable(); // Initialize Drag-and-Drop library once logged in
             } else {
                 loginScreen.style.display = 'flex'; appContainer.style.display = 'none';
                 if (unsubscribeTasks) unsubscribeTasks();
                 if (unsubscribeWiki) unsubscribeWiki();
             }
         });
+
+        // --- SORTABLE JS INIT (The Mobile Drag Fix) ---
+        function initSortable() {
+            ['todo-list', 'doing-list', 'done-list'].forEach(id => {
+                new Sortable(document.getElementById(id), {
+                    group: 'kanban', // Allows dragging between columns
+                    animation: 150,
+                    delay: 150, // Requires a 150ms long-press to pick up a card on mobile
+                    delayOnTouchOnly: true, // Desktop remains instant click-and-drag
+                    onEnd: function (evt) {
+                        const newStatus = evt.to.parentElement.getAttribute('data-status');
+                        const taskId = evt.item.getAttribute('data-id');
+                        if (taskId && newStatus) {
+                            updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
+                        }
+                    }
+                });
+            });
+        }
 
         // --- THEME ---
         const themeToggleBtn = document.getElementById('theme-toggle');
@@ -253,7 +264,6 @@
         });
 
         // --- GLOBAL VARIABLES & VIEWS ---
-        let draggedCardId = null;
         let currentEditingId = null;
         let currentWikiId = null;
         let currentFilter = 'All'; 
@@ -358,12 +368,13 @@
                 document.getElementById('todo-list').innerHTML = ''; document.getElementById('doing-list').innerHTML = ''; document.getElementById('done-list').innerHTML = '';
                 snapshot.forEach((docSnap) => {
                     const task = docSnap.data();
-                    const card = document.createElement('div'); card.className = 'card'; card.draggable = true;
+                    const card = document.createElement('div'); 
+                    card.className = 'card'; 
+                    card.setAttribute('data-id', docSnap.id); // Sortable uses this ID to update the database
+                    
                     let tagHtml = `<div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
                     card.innerHTML = `${tagHtml}${task.text}`;
 
-                    card.addEventListener('dragstart', () => { draggedCardId = docSnap.id; card.classList.add('dragging'); });
-                    card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedCardId = null; });
                     card.addEventListener('click', () => {
                         currentEditingId = docSnap.id;
                         document.getElementById('modal-title').innerText = task.text;
@@ -392,15 +403,6 @@
                 btn.innerText = "Saved!"; btn.style.backgroundColor = "#15803d";
                 setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = ""; }, 2000);
             }
-        });
-
-        document.querySelectorAll('.card-list').forEach(list => {
-            list.addEventListener('dragover', e => e.preventDefault());
-            list.addEventListener('drop', e => {
-                e.preventDefault();
-                const newStatus = list.parentElement.getAttribute('data-status');
-                if (draggedCardId) { updateDoc(doc(db, 'tasks', draggedCardId), { status: newStatus }); }
-            });
         });
 
         document.getElementById('add-btn').addEventListener('click', async () => {
