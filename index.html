@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jake's Kanban Wiki</title>
+    <title>Jake's Workspace</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -24,17 +24,20 @@
         #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
         
-        /* --- SIDEBAR DRAWER --- */
-        #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; transition: transform 0.3s ease; z-index: 2000; box-sizing: border-box; }
-        #mobile-header { display: none; background: var(--sidebar); padding: 12px 15px; border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between; position: fixed; top: 0; width: 100%; z-index: 1500; }
-        
-        .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 25px 0 10px 5px; }
-        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; font-size: 14px; transition: 0.2s; }
+        /* --- SIDEBAR (Desktop Only) --- */
+        #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
+        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
         .nav-item:hover { background: var(--nav-hover); }
         .active-nav { background: var(--border) !important; font-weight: 600; }
 
+        /* --- MOBILE VIEW SWITCHER --- */
+        #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
+        .switch-btn { background: none; border: none; color: var(--text); display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: bold; opacity: 0.6; }
+        .switch-btn.active { opacity: 1; color: #4338ca; }
+
         /* --- CONTENT AREAS --- */
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; padding-top: 0; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #kanban-view, #wiki-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
 
         /* --- KANBAN BOARD --- */
@@ -46,78 +49,88 @@
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; position: relative; touch-action: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .handle { color: #ccc; margin-right: 10px; cursor: grab; font-size: 18px; }
         
-        .sortable-fallback { opacity: 1 !important; transform: rotate(1deg) scale(1.02); background: var(--card-bg) !important; box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important; border: 1px solid var(--border); }
+        /* --- COUNTDOWN BADGE --- */
+        .countdown { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-top: 8px; display: inline-block; }
+        .overdue { background: #fee2e2; color: #ef4444; }
+        .soon { background: #ffedd5; color: #f59e0b; }
+        .later { background: #f3f4f6; color: #6b7280; }
 
-        /* --- WIKI & MODALS --- */
+        /* --- MODALS --- */
         #editor-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 4000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-        .modal-content { background: var(--card-bg); width: 90%; max-width: 700px; height: 85vh; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .modal-content { background: var(--card-bg); width: 90%; max-width: 750px; height: 85vh; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; }
         
-        .title-input { font-size: 26px; font-weight: 800; border: none; background: transparent; width: 100%; outline: none; color: inherit; margin-bottom: 10px; }
+        .title-input { font-size: 26px; font-weight: 800; border: none; background: transparent; width: 100%; outline: none; color: inherit; }
         .textarea { flex-grow: 1; width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: inherit; font-size: 16px; margin-top: 15px; background: rgba(0,0,0,0.02); color: inherit; resize: none; outline: none; }
-        
-        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .preview-area { flex-grow: 1; overflow-y: auto; padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-top: 15px; line-height: 1.6; }
+
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-toggle { background: var(--sidebar); color: var(--text); margin-right: 5px; }
+        .btn-toggle.active { background: #4338ca; color: white; }
         .btn-save { background: var(--text); color: var(--bg); }
         .btn-delete { color: #ff4d4f; background: transparent; border: 1px solid #ff4d4f; }
-        .btn-delete:hover { background: #ff4d4f; color: white; }
 
         /* --- MOBILE RE-DESIGN --- */
         @media (max-width: 768px) {
-            #sidebar { position: fixed; left: 0; transform: translateX(-100%); height: 100vh; box-shadow: 10px 0 30px rgba(0,0,0,0.1); width: 280px; }
-            #sidebar.open { transform: translateX(0); }
-            #mobile-header { display: flex; }
-            #main-content { padding-top: 55px; }
+            #sidebar { display: none; }
+            #mobile-header { display: flex; background: var(--sidebar); padding: 15px; border-bottom: 1px solid var(--border); font-weight: bold; justify-content: center; }
+            #mobile-switcher { display: flex; }
+            #main-content { padding-bottom: 65px; }
             #kanban-board { overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px; gap: 15px; }
             .column { min-width: 88vw; scroll-snap-align: center; }
-            #kanban-view, #wiki-view { padding: 20px; }
+            #kanban-view, #wiki-view { padding: 15px; }
             .modal-content { height: 92vh; padding: 20px; }
-            .title-input { font-size: 20px; }
         }
     </style>
 </head>
-<body class="light-mode"> <div id="login-screen">
+<body>
+
+    <div id="login-screen">
         <div class="login-box">
-            <h2 style="margin-top:0">Jake's Kanban Wiki</h2>
-            <button id="login-btn" class="btn btn-save">Sign in with Google</button>
+            <h2>Jake's Workspace</h2>
+            <button id="login-btn" class="btn btn-save" style="width:100%; margin-top:10px;">Sign in with Google</button>
         </div>
     </div>
 
-    <div id="mobile-header">
-        <button id="menu-toggle" style="background:none; border:none; font-size: 24px; color: var(--text);">☰</button>
-        <span style="font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Workspace</span>
-        <div style="width: 24px;"></div>
+    <div id="mobile-switcher">
+        <button id="switch-tasks" class="switch-btn active">
+            <span style="font-size: 20px;">📊</span>
+            <span>TASKS</span>
+        </button>
+        <button id="switch-wiki" class="switch-btn">
+            <span style="font-size: 20px;">📄</span>
+            <span>WIKI</span>
+        </button>
+        <button id="mobile-theme-toggle" class="switch-btn">
+            <span id="theme-icon" style="font-size: 20px;">🌙</span>
+            <span>THEME</span>
+        </button>
     </div>
 
-    <div id="app-container">
+    <div id="app-container" style="display:none; width: 100%;">
         <div id="sidebar">
-            <input type="text" id="global-search" placeholder="Search everything..." style="background: var(--bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; color: inherit; outline: none;">
-            
             <div class="sidebar-section-label">Main</div>
             <div id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</div>
             
-            <div class="sidebar-section-label">History</div>
-            <div id="history-list"></div>
-
-            <div class="sidebar-section-label">All Pages</div>
+            <div class="sidebar-section-label">Wiki Pages</div>
             <div id="wiki-list" style="flex-grow: 1; overflow-y: auto;"></div>
             
             <button id="add-wiki-btn" class="btn" style="background:none; border: 1px dashed #888; color: #888; width: 100%; margin-top: 10px;">+ New Page</button>
             
             <div style="margin-top: 20px; display: flex; gap: 8px;">
-                <button id="theme-toggle" class="btn" style="flex: 1; background: var(--border); color: var(--text);">🌙 Theme</button>
+                <button id="theme-toggle" class="btn" style="flex: 1; background: var(--border); color: var(--text);">🌙 Mode</button>
                 <button id="logout-btn" class="btn" style="flex: 1; background: var(--border); color: var(--text);">🚪 Out</button>
             </div>
         </div>
 
         <div id="main-content">
             <div id="kanban-view">
-                <h1 style="margin-top:0; font-size: 22px;">Tasks</h1>
                 <div id="kanban-board">
                     <div class="column" data-status="todo">
-                        <div class="column-header">To Do <button id="add-btn" class="btn btn-save" style="padding: 2px 10px; font-size: 12px;">+ Add</button></div>
+                        <div class="column-header">To Do <button id="add-btn" class="btn btn-save" style="padding: 2px 10px;">+ Add</button></div>
                         <div class="card-list" id="todo-list"></div>
                     </div>
                     <div class="column" data-status="doing">
-                        <div class="column-header">In Progress</div>
+                        <div class="column-header">Doing</div>
                         <div class="card-list" id="doing-list"></div>
                     </div>
                     <div class="column" data-status="done">
@@ -128,11 +141,16 @@
             </div>
 
             <div id="wiki-view" style="display: none;">
-                <input type="text" id="wiki-title-display" class="title-input" placeholder="Page Title">
-                <textarea id="wiki-notes" class="textarea" placeholder="Start your deep dive here..."></textarea>
-                <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <input type="text" id="wiki-title-display" class="title-input">
+                <div style="margin-top: 10px;">
+                    <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
+                    <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
+                </div>
+                <textarea id="wiki-notes" class="textarea" style="display:none;"></textarea>
+                <div id="wiki-preview" class="preview-area"></div>
+                <div style="margin-top: 20px; display: flex; justify-content: space-between;">
                     <button id="delete-wiki-btn" class="btn btn-delete">Delete Page</button>
-                    <button id="wiki-save-btn" class="btn btn-save">Save Changes</button>
+                    <button id="wiki-save-btn" class="btn btn-save">Save Page</button>
                 </div>
             </div>
         </div>
@@ -140,10 +158,24 @@
 
     <div id="editor-modal">
         <div class="modal-content">
-            <button id="close-modal" style="background: none; border: none; font-size: 28px; color: #888; cursor: pointer;">&times;</button>
+            <button id="close-modal" style="background: none; border: none; font-size: 28px; color: #888; cursor: pointer; position: absolute; right: 20px; top: 20px;">&times;</button>
+            
             <input type="text" id="modal-title-display" class="title-input">
-            <textarea id="modal-notes" class="textarea"></textarea>
-            <div style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
+            
+            <div style="display: flex; gap: 15px; align-items: center; margin-top: 10px;">
+                <div style="font-size: 12px; font-weight: bold;">📅 Due Date:</div>
+                <input type="date" id="task-due-date" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit;">
+            </div>
+
+            <div style="margin-top: 15px;">
+                <button id="task-mode-preview" class="btn btn-toggle active">Preview</button>
+                <button id="task-mode-edit" class="btn btn-toggle">Edit</button>
+            </div>
+
+            <textarea id="modal-notes" class="textarea" style="display:none;"></textarea>
+            <div id="modal-preview" class="preview-area"></div>
+            
+            <div style="margin-top: 25px; display: flex; justify-content: space-between;">
                 <button id="delete-task-btn" class="btn btn-delete">Delete Task</button>
                 <button id="save-notes" class="btn btn-save">Save Task</button>
             </div>
@@ -152,7 +184,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -171,22 +203,23 @@
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        // --- DARK MODE PERSISTENCE ---
+        // --- THEME ---
         const themeToggle = document.getElementById('theme-toggle');
-        const applyTheme = (theme) => {
-            if (theme === 'dark') document.body.classList.add('dark-mode');
-            else document.body.classList.remove('dark-mode');
+        const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+        const applyTheme = (t) => {
+            if (t === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('theme-icon').innerText = '☀️';
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.getElementById('theme-icon').innerText = '🌙';
+            }
+            localStorage.setItem('theme', t);
         };
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        applyTheme(savedTheme);
+        applyTheme(localStorage.getItem('theme') || 'light');
+        themeToggle.onclick = mobileThemeToggle.onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
 
-        themeToggle.onclick = () => {
-            const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
-            applyTheme(newTheme);
-            localStorage.setItem('theme', newTheme);
-        };
-
-        // --- AUTH & STATE ---
+        // --- AUTH ---
         let curTaskId = null, curWikiId = null;
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -198,14 +231,36 @@
                 document.getElementById('app-container').style.display = 'none';
             }
         });
-
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // --- SIDEBAR AUTO-CLOSE ---
-        const sidebar = document.getElementById('sidebar');
-        const closeSidebar = () => { if(window.innerWidth <= 768) sidebar.classList.remove('open'); };
-        document.getElementById('menu-toggle').onclick = () => sidebar.classList.toggle('open');
+        // --- MOBILE SWITCHER ---
+        const taskBtn = document.getElementById('switch-tasks');
+        const wikiBtn = document.getElementById('switch-wiki');
+        const kanbanView = document.getElementById('kanban-view');
+        const wikiView = document.getElementById('wiki-view');
+
+        taskBtn.onclick = () => {
+            kanbanView.style.display = 'flex'; wikiView.style.display = 'none';
+            taskBtn.classList.add('active'); wikiBtn.classList.remove('active');
+        };
+        wikiBtn.onclick = () => {
+            kanbanView.style.display = 'none'; wikiView.style.display = 'flex';
+            wikiBtn.classList.add('active'); taskBtn.classList.remove('active');
+            if(!curWikiId && document.querySelector('.wiki-item')) document.querySelector('.wiki-item').click();
+        };
+
+        function calculateCountdown(dateStr) {
+            if (!dateStr) return null;
+            const now = new Date();
+            const due = new Date(dateStr + "T23:59:59");
+            const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+            
+            if (diff < 0) return { text: "OVERDUE", class: "overdue" };
+            if (diff === 0) return { text: "DUE TODAY", class: "overdue" };
+            if (diff <= 3) return { text: `${diff} DAYS LEFT`, class: "soon" };
+            return { text: `${diff} DAYS LEFT`, class: "later" };
+        }
 
         function startApp() {
             // DRAG AND DROP
@@ -213,87 +268,91 @@
                 new Sortable(document.getElementById(id), {
                     group: 'kanban', animation: 150, delay: 300, delayOnTouchOnly: true,
                     forceFallback: true, fallbackOnBody: true,
-                    onStart: () => document.body.style.overflow = 'hidden',
                     onEnd: (evt) => {
-                        document.body.style.overflow = 'auto';
                         const newStatus = evt.to.parentElement.getAttribute('data-status');
                         const taskId = evt.item.getAttribute('data-id');
-                        if (taskId && newStatus) updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
+                        if (taskId) updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
                     }
                 });
             });
 
-            // LISTENERS
             onSnapshot(tasksCol, (snap) => {
                 ['todo-list', 'doing-list', 'done-list'].forEach(id => document.getElementById(id).innerHTML = '');
                 snap.forEach(d => {
                     const t = d.data();
                     const card = document.createElement('div');
                     card.className = 'card'; card.setAttribute('data-id', d.id);
-                    card.innerHTML = `<span class="handle">⠿</span> ${t.text}`;
+                    
+                    const cd = calculateCountdown(t.dueDate);
+                    const countdownHtml = cd ? `<div class="countdown ${cd.class}">${cd.text}</div>` : '';
+                    
+                    card.innerHTML = `<span class="handle">⠿</span> ${t.text} ${countdownHtml}`;
                     card.onclick = (e) => { if(e.target.className !== 'handle') openTask(d.id, t); };
                     document.getElementById(`${t.status}-list`).appendChild(card);
                 });
             });
 
-            // HISTORY TAB LISTENER (Last 4 modified)
-            const historyQuery = query(wikiCol, orderBy("lastModified", "desc"), limit(4));
-            onSnapshot(historyQuery, (snap) => {
-                const list = document.getElementById('history-list');
-                list.innerHTML = '';
-                snap.forEach(d => {
-                    const p = d.data();
-                    if(!p.lastModified) return;
-                    const item = document.createElement('div');
-                    item.className = 'nav-item'; item.innerHTML = `<span style="font-size:10px">🕒</span> ${p.title}`;
-                    item.onclick = () => openWiki(d.id, p);
-                    list.appendChild(item);
-                });
-            });
-
-            // ALL PAGES LISTENER
-            const allPagesQuery = query(wikiCol, orderBy("title", "asc"));
-            onSnapshot(allPagesQuery, (snap) => {
+            onSnapshot(wikiCol, (snap) => {
                 const list = document.getElementById('wiki-list');
                 list.innerHTML = '';
                 snap.forEach(d => {
                     const p = d.data();
                     const item = document.createElement('div');
-                    item.className = 'nav-item'; item.innerText = `📄 ${p.title}`;
-                    item.onclick = () => openWiki(d.id, p);
+                    item.className = 'nav-item wiki-item'; item.innerText = `📄 ${p.title}`;
+                    item.onclick = () => {
+                        curWikiId = d.id;
+                        openWiki(p);
+                        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+                        item.classList.add('active-nav');
+                    };
                     list.appendChild(item);
                 });
             });
         }
 
+        // PREVIEW / EDIT TOGGLES
+        const setupToggle = (prefix, notesEl, previewEl) => {
+            const btnP = document.getElementById(`${prefix}-mode-preview`);
+            const btnE = document.getElementById(`${prefix}-mode-edit`);
+            btnP.onclick = () => {
+                notesEl.style.display = 'none'; previewEl.style.display = 'block';
+                btnP.classList.add('active'); btnE.classList.remove('active');
+                previewEl.innerHTML = marked.parse(notesEl.value);
+            };
+            btnE.onclick = () => {
+                notesEl.style.display = 'block'; previewEl.style.display = 'none';
+                btnE.classList.add('active'); btnP.classList.remove('active');
+            };
+        };
+
+        setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
+        setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'));
+
         function openTask(id, t) {
             curTaskId = id;
             document.getElementById('modal-title-display').value = t.text;
+            document.getElementById('task-due-date').value = t.dueDate || '';
             document.getElementById('modal-notes').value = t.notes || '';
+            document.getElementById('task-mode-preview').click(); // Default to Preview
             document.getElementById('editor-modal').style.display = 'flex';
         }
 
-        function openWiki(id, p) {
-            curWikiId = id;
+        function openWiki(p) {
             document.getElementById('kanban-view').style.display = 'none';
             document.getElementById('wiki-view').style.display = 'flex';
+            wikiBtn.classList.add('active'); taskBtn.classList.remove('active');
             document.getElementById('wiki-title-display').value = p.title;
             document.getElementById('wiki-notes').value = p.content || '';
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
-            closeSidebar();
+            document.getElementById('wiki-mode-preview').click(); // Default to Preview
         }
 
-        document.getElementById('nav-kanban').onclick = () => {
-            document.getElementById('kanban-view').style.display = 'flex';
-            document.getElementById('wiki-view').style.display = 'none';
-            closeSidebar();
-        };
+        document.getElementById('nav-kanban').onclick = taskBtn.onclick;
 
-        // SAVE & DELETE
         document.getElementById('save-notes').onclick = () => {
             updateDoc(doc(db, 'tasks', curTaskId), { 
                 text: document.getElementById('modal-title-display').value,
-                notes: document.getElementById('modal-notes').value 
+                notes: document.getElementById('modal-notes').value,
+                dueDate: document.getElementById('task-due-date').value
             });
             document.getElementById('editor-modal').style.display = 'none';
         };
@@ -301,8 +360,7 @@
         document.getElementById('wiki-save-btn').onclick = async () => {
             await updateDoc(doc(db, 'wiki', curWikiId), { 
                 title: document.getElementById('wiki-title-display').value,
-                content: document.getElementById('wiki-notes').value,
-                lastModified: serverTimestamp() // Triggers the History Tab
+                content: document.getElementById('wiki-notes').value
             });
             alert("Saved!");
         };
@@ -314,7 +372,7 @@
 
         document.getElementById('add-wiki-btn').onclick = () => {
             const t = prompt("Page Title?");
-            if(t) addDoc(wikiCol, { title: t, content: '', lastModified: serverTimestamp() });
+            if(t) addDoc(wikiCol, { title: t, content: '' });
         };
 
         document.getElementById('delete-task-btn').onclick = () => {
@@ -322,7 +380,7 @@
         };
 
         document.getElementById('delete-wiki-btn').onclick = () => {
-            if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); document.getElementById('nav-kanban').click(); }
+            if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); taskBtn.click(); }
         };
 
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
