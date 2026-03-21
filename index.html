@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
-        /* --- THEME ENGINE --- */
+        /* --- DYNAMIC THEMING --- */
         :root { 
             --bg: #f7f7f5; --text: #37352f; --sidebar: #ebebec; --border: #e0e0e0; 
             --card-bg: #ffffff; --accent: #4338ca; --nav-hover: rgba(0,0,0,0.05);
@@ -24,58 +24,68 @@
         #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
         
-        /* --- SIDEBAR (Desktop) --- */
-        #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        /* --- SIDEBAR --- */
+        #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
-        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .nav-item:hover { background: var(--nav-hover); }
         .active-nav { background: var(--border) !important; font-weight: 600; }
 
-        /* --- MOBILE NAVIGATION --- */
+        /* --- MOBILE VIEW SWITCHER --- */
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
-        .switch-btn { background: none; border: none; color: var(--text); display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: bold; opacity: 0.6; transition: 0.2s; }
+        .switch-btn { background: none; border: none; color: var(--text); display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: bold; opacity: 0.6; }
         .switch-btn.active { opacity: 1; color: var(--accent); }
 
         /* --- UI COMPONENTS --- */
-        #tag-cloud { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px; margin-bottom: 5px; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-        .tag-pill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card-bg); font-size: 11px; font-weight: 600; cursor: pointer; }
+        #tag-cloud { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px; margin-bottom: 5px; white-space: nowrap; -webkit-overflow-scrolling: touch; min-height: 40px; }
+        .tag-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card-bg); font-size: 12px; font-weight: 600; cursor: pointer; height: fit-content; flex-shrink: 0; }
         .tag-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
-        .search-bar { background: var(--bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; color: inherit; outline: none; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+        .search-bar { background: var(--bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; color: inherit; outline: none; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; }
+
+        /* --- MAIN CONTENT --- */
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #kanban-view, #wiki-list-view, #wiki-content-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
         /* --- KANBAN BOARD --- */
-        #kanban-board { display: flex; gap: 20px; flex-grow: 1; }
-        .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; height: 100%; }
-        .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .card-list { flex-grow: 1; padding: 5px; min-height: 150px; }
+        #kanban-board { display: flex; gap: 20px; flex-grow: 1; align-items: flex-start; }
+        .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; max-height: 100%; }
+        .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; flex-shrink: 0; }
+        .card-list { flex-grow: 1; padding: 5px; min-height: 150px; overflow-y: auto; }
         
-        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: 0.2s; position: relative; }
+        .card:hover { border-color: var(--accent); }
+        
         .countdown { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-top: 8px; display: inline-block; }
         .overdue { background: #fee2e2; color: #ef4444; }
         .soon { background: #ffedd5; color: #f59e0b; }
         .later { background: #f3f4f6; color: #6b7280; }
 
-        /* --- MODALS & TOOLS --- */
+        /* --- WIKI HEADER FIX --- */
+        .wiki-header { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
+        .wiki-header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .wiki-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        /* --- MODALS --- */
         #editor-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 4000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-        .modal-content { background: var(--card-bg); width: 90%; max-width: 750px; height: 85vh; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; }
+        .modal-content { background: var(--card-bg); width: 90%; max-width: 750px; height: 85vh; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; box-sizing: border-box; }
         
         .textarea { flex-grow: 1; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: inherit; font-size: 16px; margin-top: 15px; background: rgba(0,0,0,0.02); color: inherit; outline: none; resize: none; }
         .preview-area { flex-grow: 1; overflow-y: auto; padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-top: 15px; line-height: 1.6; }
 
-        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
-        .btn-toggle { background: var(--sidebar); color: var(--text); margin-right: 5px; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; white-space: nowrap; }
+        .btn-toggle { background: var(--sidebar); color: var(--text); }
         .btn-toggle.active { background: var(--accent); color: white; }
         .btn-save { background: var(--text); color: var(--bg); }
         .btn-delete { color: #ff4d4f; background: transparent; border: 1px solid #ff4d4f; }
-        .sweep-btn { background: none; border: none; font-size: 18px; cursor: pointer; opacity: 0.6; }
-        .sweep-btn:hover { opacity: 1; }
 
         @media (max-width: 768px) {
             #sidebar { display: none; }
             #mobile-switcher { display: flex; }
             #main-content { padding-bottom: 65px; }
-            #kanban-board { overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px; gap: 15px; }
+            #kanban-board { overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px; gap: 15px; align-items: flex-start; }
             .column { min-width: 85vw; scroll-snap-align: center; }
             #kanban-view, #wiki-list-view, #wiki-content-view { padding: 15px; }
+            .modal-content { height: 92vh; padding: 20px; }
         }
     </style>
 </head>
@@ -83,7 +93,7 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>Jake's Workspace</h2>
+            <h2 style="margin-top:0">Jake's Workspace</h2>
             <button id="login-btn" class="btn btn-save" style="width:100%; margin-top:10px;">Sign in with Google</button>
         </div>
     </div>
@@ -121,7 +131,7 @@
                         <div class="card-list" id="doing-list"></div>
                     </div>
                     <div class="column" data-status="done">
-                        <div class="column-header">Done <button id="bulk-archive-btn" class="sweep-btn" title="Archive completed tasks">🧹</button></div>
+                        <div class="column-header">Done <button id="bulk-archive-btn" style="background:none; border:none; cursor:pointer; font-size:16px;">🧹</button></div>
                         <div class="card-list" id="done-list"></div>
                     </div>
                 </div>
@@ -135,22 +145,26 @@
             </div>
 
             <div id="wiki-content-view" style="display: none;">
-                <div id="wiki-back-btn" style="display: none; color: var(--accent); cursor: pointer; margin-bottom: 15px; font-weight: bold;">← All Pages</div>
-                <input type="text" id="wiki-title-display" class="title-input" style="font-size:26px; font-weight:800; border:none; background:transparent; width:100%; outline:none; color:inherit;">
-                <div style="display: flex; gap: 15px; align-items: center; margin: 10px 0;">
-                    <div style="font-size: 11px; font-weight: bold;">🏷️ Tag:</div>
-                    <input type="text" id="wiki-tag-input" placeholder="Project name" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 120px; font-size:12px">
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <div>
-                        <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
-                        <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
+                <div class="wiki-header">
+                    <div id="wiki-back-btn" style="display: none; color: var(--accent); cursor: pointer; font-weight: bold; margin-bottom: 10px;">← All Pages</div>
+                    <div class="wiki-header-top">
+                        <input type="text" id="wiki-title-display" class="title-input" style="font-size:28px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; flex-grow:1;" placeholder="Page Title">
+                        <div class="wiki-controls">
+                            <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
+                            <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
+                        </div>
                     </div>
-                    <button id="delete-wiki-btn" class="btn btn-delete">Delete</button>
+                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                        <div style="font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 5px;">🏷️ Tag: <input type="text" id="wiki-tag-input" placeholder="Project name" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 120px; font-size:12px"></div>
+                        <button id="delete-wiki-btn" class="btn btn-delete" style="padding: 4px 10px; font-size: 11px;">Delete Page</button>
+                    </div>
                 </div>
+
                 <textarea id="wiki-notes" class="textarea" style="display:none;"></textarea>
                 <div id="wiki-preview" class="preview-area"></div>
-                <button id="wiki-save-btn" class="btn btn-save" style="margin-top: 20px; align-self: flex-end;">Save Page</button>
+                <div style="display:flex; justify-content: flex-end; margin-top:20px;">
+                    <button id="wiki-save-btn" class="btn btn-save">Save Page</button>
+                </div>
             </div>
         </div>
     </div>
@@ -158,28 +172,33 @@
     <div id="editor-modal">
         <div class="modal-content">
             <button id="close-modal" style="background: none; border: none; font-size: 28px; color: #888; cursor: pointer; position: absolute; right: 20px; top: 20px;">&times;</button>
-            <input type="text" id="modal-title-display" class="title-input" style="font-size:26px; font-weight:800; border:none; background:transparent; width:100%; outline:none; color:inherit;">
-            <div style="display: flex; gap: 15px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
-                <div style="font-size: 11px; font-weight: bold;">📅 Due:</div>
-                <input type="date" id="task-due-date" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; font-size:12px">
-                <div style="font-size: 11px; font-weight: bold;">🏷️ Tag:</div>
-                <input type="text" id="task-tag-input" placeholder="Project name" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 100px; font-size:12px">
+            <input type="text" id="modal-title-display" class="title-input" style="font-size:24px; font-weight:800; border:none; background:transparent; width:100%; outline:none; color:inherit;" placeholder="Task Name">
+            
+            <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+                <div style="font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 5px;">📅 Due: <input type="date" id="task-due-date" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; font-size:12px"></div>
+                <div style="font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 5px;">🏷️ Tag: <input type="text" id="task-tag-input" placeholder="Category" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 100px; font-size:12px"></div>
             </div>
-            <div style="margin-top: 15px;">
-                <button id="task-mode-preview" class="btn btn-toggle active">Preview</button>
-                <button id="task-mode-edit" class="btn btn-toggle">Edit</button>
+
+            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 5px;">
+                    <button id="task-mode-preview" class="btn btn-toggle active">Preview</button>
+                    <button id="task-mode-edit" class="btn btn-toggle">Edit</button>
+                </div>
+                <button id="delete-task-btn" class="btn btn-delete" style="padding: 4px 10px; font-size: 11px;">Delete Task</button>
             </div>
-            <textarea id="modal-notes" class="textarea" style="display:none;"></textarea>
+
+            <textarea id="modal-notes" class="textarea" style="display:none;" placeholder="Notes (Markdown supported)..."></textarea>
             <div id="modal-preview" class="preview-area"></div>
-            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 15px;">
-                <div style="width: 100%; font-size: 10px; font-weight: bold; color: #888;">MOVE TO:</div>
+            
+            <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; padding-top: 15px; border-top: 1px solid var(--border);">
+                <div style="width: 100%; font-size: 10px; font-weight: bold; color: #888; margin-bottom: 5px;">MOVE TO:</div>
                 <button class="btn" style="background:var(--bg); flex:1" onclick="moveTask('todo')">To Do</button>
                 <button class="btn" style="background:var(--bg); flex:1" onclick="moveTask('doing')">Doing</button>
                 <button class="btn" style="background:var(--bg); flex:1" onclick="moveTask('done')">Done</button>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 25px;">
-                <button id="delete-task-btn" class="btn btn-delete">Delete Task</button>
-                <button id="save-notes" class="btn btn-save">Save Task</button>
+            
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button id="save-notes" class="btn btn-save">Save Changes</button>
             </div>
         </div>
     </div>
@@ -215,7 +234,7 @@
         applyTheme(localStorage.getItem('theme') || 'light');
         document.getElementById('theme-toggle').onclick = document.getElementById('mobile-theme-toggle').onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
 
-        // --- VIEW CONTROLLER ---
+        // --- NAVIGATION ---
         const kanbanView = document.getElementById('kanban-view'), wikiListView = document.getElementById('wiki-list-view'), wikiContentView = document.getElementById('wiki-content-view');
         const taskBtn = document.getElementById('switch-tasks'), wikiBtn = document.getElementById('switch-wiki');
 
@@ -225,13 +244,24 @@
             if (window.innerWidth <= 768) document.getElementById('wiki-back-btn').style.display = (view === wikiContentView) ? 'block' : 'none';
         }
 
-        const goToKanban = () => { showView(kanbanView); taskBtn.classList.add('active'); wikiBtn.classList.remove('active'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav')); document.getElementById('nav-kanban').classList.add('active-nav'); };
+        const goToKanban = () => { 
+            showView(kanbanView); 
+            taskBtn.classList.add('active'); 
+            wikiBtn.classList.remove('active'); 
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav')); 
+            document.getElementById('nav-kanban').classList.add('active-nav'); 
+        };
         taskBtn.onclick = document.getElementById('nav-kanban').onclick = goToKanban;
         
-        wikiBtn.onclick = () => { if (window.innerWidth <= 768) showView(wikiListView); else showView(wikiContentView); wikiBtn.classList.add('active'); taskBtn.classList.remove('active'); };
+        wikiBtn.onclick = () => { 
+            if (window.innerWidth <= 768) showView(wikiListView); 
+            else showView(wikiContentView); 
+            wikiBtn.classList.add('active'); 
+            taskBtn.classList.remove('active'); 
+        };
         document.getElementById('wiki-back-btn').onclick = () => showView(wikiListView);
 
-        // --- CORE LOGIC ---
+        // --- CORE RENDERING ---
         function renderBoard() {
             updateTagCloud();
             ['todo-list', 'doing-list', 'done-list'].forEach(id => document.getElementById(id).innerHTML = '');
@@ -241,8 +271,8 @@
                 const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
                 const diff = Math.ceil((new Date(t.dueDate + "T23:59:59") - new Date()) / (1000 * 60 * 60 * 24));
                 let cdHtml = t.dueDate ? `<div class="countdown ${diff < 0 ? 'overdue' : (diff <= 3 ? 'soon' : 'later')}">${diff < 0 ? 'OVERDUE' : (diff === 0 ? 'DUE TODAY' : `${diff} DAYS LEFT`)}</div>` : '';
-                card.innerHTML = `<span style="color:#ccc; margin-right:8px">⠿</span> ${t.text} ${cdHtml}`;
-                card.onclick = (e) => openTask(d.id, t);
+                card.innerHTML = `<span style="color:#ccc; margin-right:8px; font-weight:bold;">⠿</span> ${t.text} ${cdHtml}`;
+                card.onclick = () => openTask(d.id, t);
                 document.getElementById(`${t.status}-list`).appendChild(card);
             });
         }
@@ -265,18 +295,40 @@
             allWiki.forEach(d => {
                 const p = d.data();
                 if (currentTagFilter !== 'All' && p.tag !== currentTagFilter) return;
-                const item = document.createElement('div'); item.className = 'nav-item'; item.innerText = `📄 ${p.title}`;
+                
+                const item = document.createElement('div'); 
+                item.className = 'nav-item'; 
+                item.innerText = `📄 ${p.title}`;
                 item.onclick = () => { curWikiId = d.id; openWiki(p); };
-                dList.appendChild(item.cloneNode(true)); mList.appendChild(item);
-                mList.lastChild.className = 'card'; // Style adjustment for mobile
-                dList.lastChild.onclick = mList.lastChild.onclick = item.onclick;
+                
+                const desktopItem = item.cloneNode(true);
+                desktopItem.onclick = item.onclick;
+                dList.appendChild(desktopItem);
+                
+                const mobileItem = item.cloneNode(true);
+                mobileItem.className = 'card';
+                mobileItem.onclick = item.onclick;
+                mList.appendChild(mobileItem);
             });
         }
 
         function startApp() {
             onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderBoard(); });
             onSnapshot(wikiCol, (snap) => { allWiki = snap.docs; renderWikiList(); updateTagCloud(); });
-            ['todo-list', 'doing-list', 'done-list'].forEach(id => new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: (evt) => { const taskId = evt.item.getAttribute('data-id'); const newStatus = evt.to.parentElement.getAttribute('data-status'); if (taskId) updateDoc(doc(db, 'tasks', taskId), { status: newStatus }); } }));
+            
+            ['todo-list', 'doing-list', 'done-list'].forEach(id => {
+                new Sortable(document.getElementById(id), { 
+                    group: 'kanban', 
+                    animation: 150, 
+                    delay: 200, 
+                    delayOnTouchOnly: true,
+                    onEnd: (evt) => { 
+                        const taskId = evt.item.getAttribute('data-id'); 
+                        const newStatus = evt.to.parentElement.getAttribute('data-status'); 
+                        if (taskId) updateDoc(doc(db, 'tasks', taskId), { status: newStatus }); 
+                    } 
+                });
+            });
         }
 
         window.moveTask = async (status) => { if (curTaskId) { await updateDoc(doc(db, 'tasks', curTaskId), { status: status }); document.getElementById('editor-modal').style.display = 'none'; } };
@@ -299,7 +351,6 @@
         document.getElementById('delete-task-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; } };
         document.getElementById('delete-wiki-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); wikiBtn.click(); } };
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
-        
         document.getElementById('bulk-archive-btn').onclick = () => { if(confirm("Archive all completed tasks?")) { allTasks.forEach(d => { if(d.data().status === 'done') updateDoc(doc(db, 'tasks', d.id), { status: 'archived' }); }); } };
 
         onAuthStateChanged(auth, (user) => { if (user) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-container').style.display = 'flex'; startApp(); } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; } });
