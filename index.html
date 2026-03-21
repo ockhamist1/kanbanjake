@@ -102,17 +102,16 @@
             </div>
 
             <div id="news-view" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Sync</button></div>
-                <div id="news-container" class="news-grid"><p>Establishing uplink...</p></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Re-Sync</button></div>
+                <div id="news-container" class="news-grid"></div>
             </div>
 
             <div id="freebies-view" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Freebies</h2><button onclick="fetchFreebies()" class="btn">🔄 Refresh Deals</button></div>
-                <div id="freebies-container" class="news-grid"><p>Scanning deal frequencies...</p></div>
+                <div id="freebies-container" class="news-grid"></div>
             </div>
 
             <div id="wiki-list-view" style="display:none;"><h2>Wiki Library</h2><div id="mobile-wiki-list"></div></div>
-
             <div id="wiki-content-view" style="display: none;">
                 <div class="wiki-header" style="border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:10px;">
                     <input type="text" id="wiki-title-display" style="font-size:24px; font-weight:800; border:none; background:transparent; width:100%; color:inherit;">
@@ -122,8 +121,8 @@
                         <button onclick="showView(document.getElementById('wiki-list-view'))" class="btn">List</button>
                     </div>
                 </div>
-                <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:15px; font-size:16px;"></textarea>
-                <div id="wiki-preview" style="line-height:1.6;"></div>
+                <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:15px;"></textarea>
+                <div id="wiki-preview"></div>
             </div>
         </div>
     </div>
@@ -133,8 +132,8 @@
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
             <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:90%;">
             <div style="margin:15px 0; display:flex; gap:10px;"><button id="task-mode-preview" class="btn btn-active">Preview</button><button id="task-mode-edit" class="btn">Edit</button></div>
-            <textarea id="modal-notes" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit; font-size:16px;"></textarea>
-            <div id="modal-preview" style="line-height:1.6;"></div>
+            <textarea id="modal-notes" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
+            <div id="modal-preview"></div>
         </div>
     </div>
 
@@ -151,6 +150,7 @@
 
         let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false, sortables = [], userReadList = [];
 
+        // --- THEME ---
         const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'light');
         document.getElementById('theme-toggle').onclick = () => { const dark = !document.body.classList.contains('dark-mode'); applyTheme(dark ? 'dark' : 'light'); };
@@ -179,54 +179,84 @@
             if(auth.currentUser) { showSync(true); await setDoc(doc(db, 'users', auth.currentUser.uid), { readArticles: userReadList }, { merge: true }); showSync(false); }
         }
 
-        window.fetchAP = async () => {
-            const container = document.getElementById('news-container');
-            container.innerHTML = '<p>Syncing AP...</p>';
-            try {
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}&cb=${Date.now()}`);
-                const text = await res.text();
-                const xml = new DOMParser().parseFromString(text, "text/xml");
-                const items = Array.from(xml.querySelectorAll("item"));
-                container.innerHTML = '';
-                items.forEach((item, i) => {
-                    if (i > 24) return;
-                    const title = item.querySelector("title")?.textContent || "Breaking...";
-                    const link = item.querySelector("link")?.textContent || "#";
-                    const isRead = userReadList.includes(link);
-                    const card = document.createElement('div');
-                    card.className = `news-card ${isRead ? 'read' : ''}`;
-                    card.style.order = isRead ? "1" : "0";
-                    card.innerHTML = `<div class="news-title">${title}</div><div class="news-footer"><span>AP</span><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Read</label></div>`;
-                    card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
-                    const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
-                    container.appendChild(card);
-                });
-            } catch (e) { container.innerHTML = '<p>AP Jammed.</p>'; }
+        // --- TRIPLE-PROXY NEWS ENGINE ---
+        window.fetchSource = async (cid, urls, parser, sourceName) => {
+            const container = document.getElementById(cid);
+            container.innerHTML = `<p>Tuning ${sourceName} signal...</p>`;
+            let data = null;
+            for (let url of urls) {
+                try {
+                    const res = await fetch(`${url}&cb=${Date.now()}`);
+                    if (res.ok) { data = await res.json(); break; }
+                } catch (e) { continue; }
+            }
+            if (!data) { container.innerHTML = `<p style="color:red;">${sourceName} Jammed.</p>`; return; }
+            parser(data, container);
         };
 
-        window.fetchFreebies = async () => {
-            const container = document.getElementById('freebies-container');
-            container.innerHTML = '<p>Syncing Deals...</p>';
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=25')}&cb=${Date.now()}`);
-                const json = await res.json();
-                const items = JSON.parse(json.contents).data.children;
-                container.innerHTML = '';
-                items.forEach((item, i) => {
-                    const post = item.data;
-                    const link = `https://reddit.com${post.permalink}`;
-                    const isRead = userReadList.includes(link);
-                    const card = document.createElement('div');
-                    card.className = `news-card ${isRead ? 'read' : ''}`;
-                    card.style.order = isRead ? "1" : "0";
-                    card.innerHTML = `<div class="news-title">${post.title}</div><div class="news-footer"><span>REDDIT</span><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Read</label></div>`;
-                    card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
-                    const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
-                    container.appendChild(card);
-                });
-            } catch (e) { container.innerHTML = '<p>Reddit Jammed.</p>'; }
-        };
+        window.fetchAP = () => fetchSource('news-container', [
+            `https://api.allorigins.win/get?url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`,
+            `https://corsproxy.io/?${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`
+        ], (data, container) => {
+            const xmlText = data.contents || data;
+            const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+            const items = Array.from(xml.querySelectorAll("item"));
+            container.innerHTML = '';
+            items.forEach((item, i) => {
+                if (i > 24) return;
+                const title = item.querySelector("title")?.textContent || "Breaking...";
+                const link = item.querySelector("link")?.textContent || "#";
+                const isRead = userReadList.includes(link);
+                const card = document.createElement('div');
+                card.className = `news-card ${isRead ? 'read' : ''}`;
+                card.style.order = isRead ? "1" : "0";
+                card.innerHTML = `<div class="news-title">${title}</div><div class="news-footer"><span>AP</span><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Read</label></div>`;
+                card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
+                const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
+                container.appendChild(card);
+            });
+        }, 'AP');
 
+        window.fetchFreebies = () => fetchSource('freebies-container', [
+            `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=25')}`,
+            `https://corsproxy.io/?${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=25')}`
+        ], (data, container) => {
+            const json = data.contents ? JSON.parse(data.contents) : data;
+            const items = json.data?.children || [];
+            container.innerHTML = '';
+            items.forEach(item => {
+                const post = item.data;
+                const link = `https://reddit.com${post.permalink}`;
+                const isRead = userReadList.includes(link);
+                const card = document.createElement('div');
+                card.className = `news-card ${isRead ? 'read' : ''}`;
+                card.style.order = isRead ? "1" : "0";
+                card.innerHTML = `<div class="news-title">${post.title}</div><div class="news-footer"><span>REDDIT</span><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Read</label></div>`;
+                card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
+                const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
+                container.appendChild(card);
+            });
+        }, 'DEALS');
+
+        // --- MASTER LISTENERS (HARD-LOCKED) ---
+        ['todo-list', 'doing-list', 'done-list'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                const card = e.target.closest('.card');
+                if (card) {
+                    const tid = card.getAttribute('data-id');
+                    const task = allTasks.find(d => d.id === tid);
+                    if (task) {
+                        curTaskId = tid; isEditing = true;
+                        document.getElementById('modal-title-display').value = task.data().text;
+                        document.getElementById('modal-notes').value = task.data().notes || '';
+                        document.getElementById('task-mode-preview').click();
+                        document.getElementById('editor-modal').style.display = 'flex';
+                    }
+                }
+            });
+        });
+
+        // --- BOARD RENDER ---
         function renderBoard() {
             if (isEditing) return;
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
@@ -235,7 +265,6 @@
                 allTasks.forEach(d => {
                     if (d.data().status === status) {
                         const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id); card.innerText = d.data().text;
-                        card.onclick = () => { curTaskId = d.id; isEditing = true; document.getElementById('modal-title-display').value = d.data().text; document.getElementById('modal-notes').value = d.data().notes || ''; document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display = 'flex'; };
                         list.appendChild(card);
                     }
                 });
@@ -252,10 +281,18 @@
             const side = document.getElementById('sidebar-wiki-list'), mob = document.getElementById('mobile-wiki-list');
             side.innerHTML = ''; mob.innerHTML = '';
             s.docs.forEach(d => {
-                const openWiki = () => { curWikiId = d.id; isEditing = false; document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-notes').value = d.data().content || ''; document.getElementById('wiki-mode-preview').click(); showView(document.getElementById('wiki-content-view')); };
-                const btnSide = document.createElement('button'); btnSide.className = 'nav-item'; btnSide.innerText = d.data().title; btnSide.onclick = openWiki;
-                const btnMob = document.createElement('button'); btnMob.className = 'nav-item'; btnMob.innerText = d.data().title; btnMob.onclick = openWiki;
-                side.appendChild(btnSide); mob.appendChild(btnMob);
+                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = d.data().title;
+                const openWiki = () => { 
+                    curWikiId = d.id; isEditing = false; 
+                    document.getElementById('wiki-title-display').value = d.data().title; 
+                    document.getElementById('wiki-notes').value = d.data().content || ''; 
+                    document.getElementById('wiki-mode-preview').click(); 
+                    showView(document.getElementById('wiki-content-view')); 
+                };
+                btn.onclick = openWiki;
+                side.appendChild(btn); 
+                const mobBtn = btn.cloneNode(true); mobBtn.onclick = openWiki;
+                mob.appendChild(mobBtn);
             });
         });
 
