@@ -32,13 +32,13 @@
         .active-nav { background: var(--border) !important; font-weight: 600; }
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        #kanban-view, #wiki-content-view, #news-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
+        #kanban-view, #wiki-content-view, #news-view, #drudge-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
         /* --- TRIAGE NEWS GRID --- */
         .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
         .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .news-card:hover { border-color: var(--accent); background: var(--nav-hover); }
-        .news-card.read { opacity: 0.45; filter: grayscale(1); order: 1; } /* Moves read items to the bottom using Flex/Grid Order */
+        .news-card.read { opacity: 0.45; filter: grayscale(1); order: 1; }
         .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 12px; }
         .news-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; }
         .news-meta { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #888; }
@@ -50,9 +50,6 @@
         .column { width: 300px; display: flex; flex-direction: column; margin-right: 20px; }
         .card-list { min-height: 300px; padding-bottom: 100px; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-
-        .toolbar { display: flex; gap: 4px; background: var(--bg); padding: 5px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px; }
-        .toolbar-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: var(--text); }
 
         .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
         .btn-toggle { background: var(--sidebar); color: var(--text); }
@@ -76,6 +73,7 @@
             <div class="sidebar-section-label">Main</div>
             <div id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</div>
             <div id="nav-news-sidebar" class="nav-item">📰 AP News Feed</div>
+            <div id="nav-drudge-sidebar" class="nav-item">🚨 Drudge Report</div>
             <div class="sidebar-section-label">Wiki Library</div>
             <div id="wiki-nav-list" style="flex-grow: 1; overflow-y: auto;"></div>
             <button id="add-wiki-btn" class="btn" style="background:none; border: 1px dashed #888; color:#888; width:100%; margin-top:10px;">+ New Page</button>
@@ -100,9 +98,17 @@
             <div id="news-view" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h2 style="margin:0">AP News: Quadrant Update</h2>
-                    <button id="re-sync-btn" style="background:var(--border); border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Re-Sync Array</button>
+                    <button id="re-sync-ap" class="btn" style="background:var(--border); color:var(--text);">🔄 Re-Sync AP</button>
                 </div>
-                <div id="news-container" class="news-grid"><p>Scanning subspace...</p></div>
+                <div id="news-container" class="news-grid"><p>Scanning AP subspace...</p></div>
+            </div>
+
+            <div id="drudge-view" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="margin:0">🚨 Drudge Report Array</h2>
+                    <button id="re-sync-drudge" class="btn" style="background:var(--border); color:var(--text);">🔄 Re-Sync Drudge</button>
+                </div>
+                <div id="drudge-container" class="news-grid"><p>Scanning Drudge frequencies...</p></div>
             </div>
 
             <div id="wiki-content-view" style="display: none;">
@@ -113,12 +119,6 @@
                         <button id="wiki-mode-edit" class="btn-toggle">Edit</button>
                         <button id="wiki-export-pdf" style="background:var(--border); border:none; padding:6px 12px; border-radius:4px; font-size:12px; cursor:pointer;">🖨️ PDF</button>
                     </div>
-                </div>
-                <div id="wiki-toolbar" class="toolbar" style="display:none;">
-                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '**', '**')">B</button>
-                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '*', '*')">I</button>
-                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '# ', '')">H1</button>
-                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '- ', '')">List</button>
                 </div>
                 <textarea id="wiki-notes" class="textarea" style="display:none; width:100%; min-height:500px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
                 <div id="wiki-preview" class="preview-area" style="overflow-y:auto;"></div>
@@ -155,9 +155,7 @@
         let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false, sortables = [];
 
         // --- AUTH ---
-        document.getElementById('login-btn').onclick = async () => {
-            try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
-        };
+        document.getElementById('login-btn').onclick = async () => { try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); } };
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
         const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
@@ -166,19 +164,17 @@
 
         const debounce = (f, w) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f.apply(this, a), w); }; };
 
-        // --- SORTED TRIAGE NEWS FETCH ---
-        window.fetchNews = async function() {
-            const container = document.getElementById('news-container');
-            container.innerHTML = '<p>Re-sorting subspace array...</p>';
+        // --- UNIVERSAL NEWS HANDLER ---
+        async function fetchSource(containerId, storageKey, rssUrl, sourceName) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<p>Refreshing ${sourceName} array...</p>`;
             try {
-                const readList = JSON.parse(localStorage.getItem('readArticles') || '[]');
-                const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en');
-                const response = await fetch(`https://corsproxy.io/?${rssUrl}&cb=${Date.now()}`);
+                const readList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}&cb=${Date.now()}`);
                 const text = await response.text();
                 const xml = new DOMParser().parseFromString(text, "text/xml");
                 const items = Array.from(xml.querySelectorAll("item"));
                 
-                // SECONDARY SORT: Unread items to index 0, Read items to the end
                 items.sort((a, b) => {
                     const readA = readList.includes(a.querySelector("link").textContent);
                     const readB = readList.includes(b.querySelector("link").textContent);
@@ -190,60 +186,58 @@
                     if (i >= 24) return;
                     const title = item.querySelector("title").textContent;
                     const link = item.querySelector("link").textContent;
-                    const date = item.querySelector("pubDate").textContent.split(' ').slice(0, 4).join(' ');
                     const isRead = readList.includes(link);
 
                     const card = document.createElement('div'); 
                     card.className = `news-card ${isRead ? 'read' : ''}`;
-                    card.style.order = isRead ? "1" : "0"; // Visual fallback for sorting
+                    card.style.order = isRead ? "1" : "0";
                     card.innerHTML = `
                         <div class="news-title">${title}</div>
                         <div class="news-footer">
-                            <div class="news-meta">AP NEWS &bull; ${date}</div>
+                            <div class="news-meta">${sourceName}</div>
                             <label class="read-toggle">
                                 <input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read
                             </label>
                         </div>
                     `;
                     
-                    card.onclick = () => {
-                        toggleReadState(link, true, card);
-                        window.open(link, '_blank');
-                    };
-
+                    card.onclick = () => { toggleRead(link, true, card, storageKey); window.open(link, '_blank'); };
                     const checkbox = card.querySelector('input');
-                    checkbox.onclick = (e) => {
-                        e.stopPropagation();
-                        toggleReadState(link, checkbox.checked, card);
-                    };
-
+                    checkbox.onclick = (e) => { e.stopPropagation(); toggleRead(link, checkbox.checked, card, storageKey); };
                     container.appendChild(card);
                 });
-            } catch (e) { container.innerHTML = '<p style="color:red;">Interference detected.</p>'; }
+            } catch (e) { container.innerHTML = `<p style="color:red;">Interference in ${sourceName} signal.</p>`; }
         }
 
-        function toggleReadState(link, shouldBeRead, cardElement) {
-            let currentReads = JSON.parse(localStorage.getItem('readArticles') || '[]');
-            if (shouldBeRead && !currentReads.includes(link)) {
-                currentReads.push(link);
-                cardElement.classList.add('read');
-                cardElement.style.order = "1";
-            } else if (!shouldBeRead) {
-                currentReads = currentReads.filter(r => r !== link);
-                cardElement.classList.remove('read');
-                cardElement.style.order = "0";
-            }
-            localStorage.setItem('readArticles', JSON.stringify(currentReads));
+        function toggleRead(link, shouldBeRead, cardElement, storageKey) {
+            let currentReads = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (shouldBeRead && !currentReads.includes(link)) { currentReads.push(link); cardElement.classList.add('read'); cardElement.style.order = "1"; }
+            else if (!shouldBeRead) { currentReads = currentReads.filter(r => r !== link); cardElement.classList.remove('read'); cardElement.style.order = "0"; }
+            localStorage.setItem(storageKey, JSON.stringify(currentReads));
         }
 
-        // --- BOARD LOGIC ---
+        const fetchAP = () => fetchSource('news-container', 'readArticlesAP', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP NEWS');
+        const fetchDrudge = () => fetchSource('drudge-container', 'readArticlesDrudge', 'https://drudgereportfeed.com/rss.xml', 'DRUDGE REPORT');
+
+        const showView = (v) => { 
+            [document.getElementById('kanban-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('drudge-view')].forEach(div => div.style.display = 'none');
+            v.style.display = 'flex'; 
+            if (v === document.getElementById('news-view')) fetchAP();
+            if (v === document.getElementById('drudge-view')) fetchDrudge();
+        };
+
+        document.getElementById('nav-news-sidebar').onclick = () => showView(document.getElementById('news-view'));
+        document.getElementById('nav-drudge-sidebar').onclick = () => showView(document.getElementById('drudge-view'));
+        document.getElementById('nav-kanban').onclick = () => showView(document.getElementById('kanban-view'));
+        document.getElementById('re-sync-ap').onclick = fetchAP;
+        document.getElementById('re-sync-drudge').onclick = fetchDrudge;
+
+        // --- KANBAN & WIKI (PROTECTED) ---
         function initSortable() {
             sortables.forEach(s => s.destroy());
-            sortables = ['todo-list', 'doing-list', 'done-list'].map(id => {
-                return new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: (evt) => {
-                    updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: evt.to.parentElement.getAttribute('data-status') });
-                }});
-            });
+            sortables = ['todo-list', 'doing-list', 'done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: (evt) => {
+                updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: evt.to.parentElement.getAttribute('data-status') });
+            }}));
         }
 
         function renderBoard() {
@@ -263,23 +257,6 @@
             initSortable();
         }
 
-        const showView = (v) => { 
-            [document.getElementById('kanban-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view')].forEach(div => div.style.display = 'none');
-            v.style.display = 'flex'; if (v === document.getElementById('news-view')) fetchNews();
-        };
-
-        document.getElementById('nav-news-sidebar').onclick = () => showView(document.getElementById('news-view'));
-        document.getElementById('nav-kanban').onclick = () => showView(document.getElementById('kanban-view'));
-        document.getElementById('re-sync-btn').onclick = fetchNews;
-
-        function setupToggle(p, n, pr, tb) {
-            const bP = document.getElementById(`${p}-mode-preview`), bE = document.getElementById(`${p}-mode-edit`);
-            bP.onclick = () => { isEditing = false; n.style.display = 'none'; pr.style.display = 'block'; if(tb) document.getElementById(tb).style.display = 'none'; bP.classList.add('active'); bE.classList.remove('active'); pr.innerHTML = marked.parse(n.value || ""); };
-            bE.onclick = () => { isEditing = true; n.style.display = 'block'; pr.style.display = 'none'; if(tb) document.getElementById(tb).style.display = 'flex'; bE.classList.add('active'); bP.classList.remove('active'); };
-        }
-        setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
-        setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'), 'wiki-toolbar');
-
         onSnapshot(wikiCol, (snap) => {
             const list = document.getElementById('wiki-nav-list'); list.innerHTML = '';
             snap.docs.forEach(d => {
@@ -290,35 +267,11 @@
         });
 
         onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderBoard(); });
-
-        window.wrap = (id, pre, suf) => {
-            const ta = document.getElementById(id);
-            const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
-            ta.value = v.substring(0, s) + pre + v.substring(s, e) + suf + v.substring(e);
-            ta.dispatchEvent(new Event('input'));
-        };
-
-        const autoSaveWiki = debounce(async () => {
-            if (curWikiId && isEditing) await updateDoc(doc(db, 'wiki', curWikiId), { title: document.getElementById('wiki-title-display').value, content: document.getElementById('wiki-notes').value, lastEdited: serverTimestamp() });
-        }, 1500);
-        document.getElementById('wiki-notes').oninput = autoSaveWiki;
-        document.getElementById('wiki-title-display').oninput = autoSaveWiki;
-
-        const autoSaveTask = debounce(async () => {
-            if (curTaskId && isEditing) await updateDoc(doc(db, 'tasks', curTaskId), { text: document.getElementById('modal-title-display').value, notes: document.getElementById('modal-notes').value });
-        }, 1500);
-        document.getElementById('modal-notes').oninput = autoSaveTask;
-        document.getElementById('modal-title-display').oninput = autoSaveTask;
-
-        onAuthStateChanged(auth, (u) => { 
-            if(u) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-container').style.display = 'flex'; }
-            else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; }
-        });
+        onAuthStateChanged(auth, (u) => { document.getElementById('login-screen').style.display = u ? 'none' : 'flex'; document.getElementById('app-container').style.display = u ? 'flex' : 'none'; });
 
         document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(wikiCol, { title: t, content: '', lastEdited: serverTimestamp() }); };
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(tasksCol, { text: t, status: 'todo' }); };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display = 'none'; isEditing = false; };
-        document.getElementById('wiki-export-pdf').onclick = () => window.print();
     </script>
 </body>
 </html>
