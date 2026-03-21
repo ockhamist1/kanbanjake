@@ -25,7 +25,6 @@
         #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
         
-        /* --- SIDEBAR --- */
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 14px; transition: 0.2s; }
@@ -45,14 +44,12 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-list-view, #wiki-content-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
-        /* --- KANBAN --- */
         #kanban-board { display: flex; gap: 20px; flex-grow: 1; align-items: flex-start; }
         .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; max-height: 100%; }
         .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         .card-list { flex-grow: 1; padding: 5px; min-height: 150px; overflow-y: auto; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-
-        /* --- WIKI HEADER --- */
+        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        
         .wiki-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
         .wiki-header-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .wiki-header-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -237,21 +234,24 @@
             return date.toLocaleDateString(undefined, {month:'short', day:'numeric'});
         };
 
-        function generateTOC(markdown, tocId, previewId) {
+        function generateTOC(markdown, tocId, previewArea) {
             const lines = markdown.split('\n');
             const toc = document.getElementById(tocId);
-            const preview = document.getElementById(previewId);
             toc.innerHTML = '<div style="font-size:11px; font-weight:bold; color:#888; margin-bottom:10px;">📍 JUMP TO SECTION</div>';
             let found = false;
             lines.forEach(line => {
                 const match = line.match(/^(#{1,2})\s+(.+)$/);
                 if (match) {
                     found = true;
-                    const id = match[2].toLowerCase().replace(/[^\w]+/g, '-');
+                    const text = match[2];
+                    const id = text.toLowerCase().replace(/[^\w]+/g, '-');
                     const link = document.createElement('a');
                     link.className = 'toc-link' + (match[1].length === 2 ? ' toc-sub' : '');
-                    link.innerText = (match[1].length === 2 ? '↳ ' : '') + match[2];
-                    link.onclick = () => preview.querySelector('#' + id)?.scrollIntoView({ behavior: 'smooth' });
+                    link.innerText = (match[1].length === 2 ? '↳ ' : '') + text;
+                    link.onclick = () => {
+                        const target = document.getElementById(id);
+                        if (target) target.scrollIntoView({ behavior: 'smooth' });
+                    };
                     toc.appendChild(link);
                 }
             });
@@ -265,7 +265,7 @@
                 await addDoc(wikiCol, {
                     title: "📖 How to Use This Site",
                     tag: "Guide",
-                    content: "# Getting Started\nWelcome to your Star Trek inspired workspace.\n\n## Markdown Tips\n- # Header\n- ## Subheader\n- **Bold**\n- *Italics*\n- ![Image Alt](URL)\n\n## Site Tips\n- **Auto-Save**: Saves as you type.\n- **PDF**: Click PDF to print.\n- **Search**: Scans library content.\n- **Tags**: Filter board and library simultaneously.",
+                    content: "# Getting Started\nWelcome to your Star Trek inspired workspace.\n\n## Markdown Tips\n- # Header\n- ## Subheader\n- **Bold**\n- *Italics*\n\n## Site Tips\n- **Auto-Save**: Saves as you type.\n- **PDF**: Click PDF to print.\n- **Search**: Scans library content.\n- **Tags**: Filter everything simultaneously.",
                     lastEdited: serverTimestamp()
                 });
             }
@@ -274,8 +274,9 @@
         function renderMarkdown(prefix, notesEl, previewEl, tocId) {
             const rend = new marked.Renderer();
             rend.heading = (t, l) => `<h${l} id="${t.toLowerCase().replace(/[^\w]+/g, '-')}">${t}</h${l}>`;
-            previewEl.innerHTML = marked.parse(notesEl.value || "", { renderer: rend });
-            if (tocId) generateTOC(notesEl.value || "", tocId, prefix + '-preview');
+            const content = notesEl.value || "";
+            previewEl.innerHTML = marked.parse(content, { renderer: rend });
+            if (tocId) generateTOC(content, tocId, previewEl);
         }
 
         const applyTheme = (t) => {
@@ -397,12 +398,12 @@
         
         function openWiki(p) { 
             showView(wikiContentView); 
-            curWikiId = curWikiId; // ID already set by click listener
+            document.getElementById('wiki-preview').innerHTML = ''; // Sanity clear
             document.getElementById('wiki-title-display').value = p.title; 
             document.getElementById('wiki-tag-input').value = p.tag || ''; 
             document.getElementById('wiki-notes').value = p.content || ''; 
             setStatus('wiki-sync-indicator', 'Synced'); 
-            // FORCE RENDER PREVIEW
+            // FORCE ACTIVE PREVIEW
             document.getElementById('wiki-mode-preview').classList.add('active');
             document.getElementById('wiki-mode-edit').classList.remove('active');
             document.getElementById('wiki-notes').style.display = 'none';
