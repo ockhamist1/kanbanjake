@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jake's Workspace</title>
     
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
@@ -60,7 +62,7 @@
         .soon { background: #ffedd5; color: #f59e0b; }
         .later { background: #f3f4f6; color: #6b7280; }
 
-        /* --- WIKI HEADER FIX --- */
+        /* --- WIKI HEADER --- */
         .wiki-header { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
         .wiki-header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .wiki-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -351,6 +353,7 @@
         document.getElementById('delete-task-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; } };
         document.getElementById('delete-wiki-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); wikiBtn.click(); } };
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
+        
         document.getElementById('bulk-archive-btn').onclick = () => { if(confirm("Archive all completed tasks?")) { allTasks.forEach(d => { if(d.data().status === 'done') updateDoc(doc(db, 'tasks', d.id), { status: 'archived' }); }); } };
 
         onAuthStateChanged(auth, (user) => { if (user) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-container').style.display = 'flex'; startApp(); } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; } });
