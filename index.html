@@ -38,27 +38,31 @@
         .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 20px; min-height: 100px; }
         
-        /* FIX: touch-action manipulation prevents the browser from fighting the drag script */
         .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
         .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
         .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; border: 2px dashed #4338ca; } 
-        /* FIX: Styling for the fake card that floats on your screen during mobile drag */
         .sortable-fallback { opacity: 1 !important; transform: scale(1.05); cursor: grabbing; box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important; }
         
         .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
         
+        /* --- EDIT & DELETE STYLING --- */
+        .title-input { font-size: 24px; font-weight: bold; border: 1px solid transparent; background: transparent; width: 100%; outline: none; padding: 5px; font-family: inherit; color: inherit; border-radius: 4px; transition: 0.2s; box-sizing: border-box; margin: 0; }
+        .title-input:hover, .title-input:focus { border-color: #ccc; background: rgba(0,0,0,0.02); }
+        
+        .delete-btn { background: none; border: 1px solid #ff4d4f; color: #ff4d4f; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
+        .delete-btn:hover { background: #ff4d4f; color: white; }
+
         .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px; transition: 0.3s;}
         .mode-btn.active { background: #ebebec; font-weight: 600; border-color: #bbb;}
         .editor-textarea { flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa; margin-top: 15px; transition: 0.3s;}
         .preview-area { display: none; flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow-y: auto; background-color: white; line-height: 1.6; margin-top: 15px; transition: 0.3s;}
-        .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 20px; align-self: flex-end; transition: 0.3s;}
+        .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.3s;}
 
         #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.3s;}
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;}
-        #modal-title { margin: 0; font-size: 20px; word-break: break-word; padding-right: 10px; }
-        #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; margin-left: 10px;}
+        .modal-header { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #eee; padding-bottom: 15px;}
+        #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; position: absolute; right: 20px; top: 20px; }
         
         .sidebar-action { margin-top: 10px; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; width: 100%; text-align: center; }
 
@@ -81,6 +85,7 @@
         body.dark-mode .modal-header { border-bottom-color: #333; }
         body.dark-mode .sidebar-action { border-color: #555; color: #ccc; }
         body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; }
+        body.dark-mode .title-input:hover, body.dark-mode .title-input:focus { border-color: #555; background: rgba(255,255,255,0.05); }
 
         /* --- MOBILE OPTIMIZATION --- */
         @media (max-width: 768px) {
@@ -99,9 +104,7 @@
             .column { min-width: 85vw; width: 85vw; flex-shrink: 0; scroll-snap-align: center; margin-right: 15px; }
             
             .modal-content { width: 95%; height: 90vh; padding: 20px; box-sizing: border-box; }
-            .modal-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-            #modal-title { font-size: 18px; }
-            #close-modal { position: absolute; top: 15px; right: 15px; }
+            .title-input { font-size: 20px; }
             #wiki-view { padding: 20px; }
         }
     </style>
@@ -157,8 +160,8 @@
             </div>
 
             <div id="wiki-view">
-                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; gap: 10px;">
-                    <h1 id="wiki-page-title" style="margin: 0; font-size: 20px;">Page Title</h1>
+                <div style="display: flex; flex-direction: column; border-bottom: 1px solid #eee; padding-bottom: 15px; gap: 10px;">
+                    <input type="text" id="wiki-title-input" class="title-input" placeholder="Page Title">
                     <div>
                         <button id="wiki-btn-edit" class="mode-btn active">Edit</button>
                         <button id="wiki-btn-preview" class="mode-btn">Preview</button>
@@ -166,7 +169,11 @@
                 </div>
                 <textarea id="wiki-page-notes" class="editor-textarea" placeholder="Start writing your wiki page here using Markdown..."></textarea>
                 <div id="wiki-page-preview" class="preview-area"></div>
-                <button id="wiki-save-btn" class="save-btn">Save Page</button>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button id="delete-wiki-btn" class="delete-btn">🗑️ Delete Page</button>
+                    <button id="wiki-save-btn" class="save-btn">Save Page</button>
+                </div>
             </div>
         </div>
     </div>
@@ -175,21 +182,26 @@
         <div class="modal-content">
             <button id="close-modal">&times;</button>
             <div class="modal-header">
-                <h2 id="modal-title">Task Title</h2>
-                <div style="margin-top: 10px;">
+                <input type="text" id="modal-title-input" class="title-input" placeholder="Task Title">
+                <div style="margin-top: 5px;">
                     <button id="modal-btn-edit" class="mode-btn active">Edit</button>
                     <button id="modal-btn-preview" class="mode-btn">Preview</button>
                 </div>
             </div>
             <textarea id="modal-notes" class="editor-textarea" placeholder="Write your task notes here..."></textarea>
             <div id="modal-preview" class="preview-area"></div>
-            <div style="text-align: right;"><button id="save-notes" class="save-btn">Save Notes</button></div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <button id="delete-task-btn" class="delete-btn">🗑️ Delete Task</button>
+                <button id="save-notes" class="save-btn">Save Notes</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
+        // Added deleteDoc to the import list
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -234,18 +246,18 @@
             }
         });
 
-        // --- THE MASSIVE MOBILE DRAG FIX ---
+        // --- SORTABLEJS DRAG FIX ---
         function initSortable() {
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 new Sortable(document.getElementById(id), {
                     group: 'kanban', 
                     animation: 150,
-                    delay: 200, // Reduced slightly for a snappier pickup
+                    delay: 200, 
                     delayOnTouchOnly: true, 
-                    touchStartThreshold: 15, // FIX: Allows your finger to wiggle heavily without breaking the drag
-                    forceFallback: true, // FIX: Bypasses native Android browser dragging completely
-                    fallbackClass: "sortable-fallback", // Uses the special CSS styling to make the card float
-                    fallbackOnBody: true, // FIX: Pops the card over the columns so it doesn't get hidden
+                    touchStartThreshold: 15, 
+                    forceFallback: true, 
+                    fallbackClass: "sortable-fallback", 
+                    fallbackOnBody: true, 
                     swapThreshold: 0.65,
                     onEnd: function (evt) {
                         const newStatus = evt.to.parentElement.getAttribute('data-status');
@@ -316,8 +328,8 @@
             });
         });
 
-        // --- WIKI & MODAL DOM ---
-        const wikiTitle = document.getElementById('wiki-page-title');
+        // --- WIKI DOM ---
+        const wikiTitleInput = document.getElementById('wiki-title-input');
         const wikiNotes = document.getElementById('wiki-page-notes');
         const wikiPreview = document.getElementById('wiki-page-preview');
         const wikiBtnEdit = document.getElementById('wiki-btn-edit');
@@ -333,7 +345,9 @@
             wikiPreview.innerHTML = marked.parse(wikiNotes.value); 
         });
 
+        // --- KANBAN MODAL DOM ---
         const modal = document.getElementById('editor-modal');
+        const modalTitleInput = document.getElementById('modal-title-input');
         const modalNotes = document.getElementById('modal-notes');
         const modalPreview = document.getElementById('modal-preview');
         const modalBtnEdit = document.getElementById('modal-btn-edit');
@@ -365,7 +379,8 @@
                         link.classList.add('active-nav');
 
                         currentWikiId = docSnap.id;
-                        wikiTitle.innerText = page.title; wikiNotes.value = page.content || '';
+                        wikiTitleInput.value = page.title; 
+                        wikiNotes.value = page.content || '';
                         if(page.content) { wikiBtnPreview.click(); } else { wikiBtnEdit.click(); }
                     });
                     wikiList.appendChild(link);
@@ -380,13 +395,14 @@
                     const card = document.createElement('div'); 
                     card.className = 'card'; 
                     card.setAttribute('data-id', docSnap.id);
+                    // Stripped out all native HTML5 dragging logic here so SortableJS can work flawlessly
                     
                     let tagHtml = `<div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
                     card.innerHTML = `${tagHtml}${task.text}`;
 
                     card.addEventListener('click', () => {
                         currentEditingId = docSnap.id;
-                        document.getElementById('modal-title').innerText = task.text;
+                        modalTitleInput.value = task.text; 
                         modalNotes.value = task.notes || ''; 
                         modalBtnEdit.click(); modal.style.display = 'flex';
                     });
@@ -399,7 +415,9 @@
             });
         }
 
-        // --- ACTIONS ---
+        // --- ACTIONS: CREATE, UPDATE, DELETE ---
+        
+        // Wiki Actions
         document.getElementById('add-wiki-btn').addEventListener('click', async () => {
             const title = prompt("What is the title of the new Wiki page?");
             if (title) { await addDoc(wikiCol, { title: title, content: '' }); }
@@ -407,13 +425,24 @@
 
         document.getElementById('wiki-save-btn').addEventListener('click', async () => {
             if (currentWikiId) {
-                await updateDoc(doc(db, 'wiki', currentWikiId), { content: wikiNotes.value });
+                await updateDoc(doc(db, 'wiki', currentWikiId), { 
+                    content: wikiNotes.value,
+                    title: wikiTitleInput.value // Saves the renamed title
+                });
                 const btn = document.getElementById('wiki-save-btn');
                 btn.innerText = "Saved!"; btn.style.backgroundColor = "#15803d";
                 setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = ""; }, 2000);
             }
         });
 
+        document.getElementById('delete-wiki-btn').addEventListener('click', async () => {
+            if (currentWikiId && confirm("Are you sure you want to permanently delete this page?")) {
+                await deleteDoc(doc(db, 'wiki', currentWikiId));
+                navKanban.click(); // Send user back to board after deleting
+            }
+        });
+
+        // Kanban Actions
         document.getElementById('add-btn').addEventListener('click', async () => {
             const text = prompt("What is the new task?");
             if (text) {
@@ -423,12 +452,24 @@
         });
 
         document.getElementById('close-modal').addEventListener('click', () => { modal.style.display = 'none'; });
+        
         document.getElementById('save-notes').addEventListener('click', async () => {
             if (currentEditingId) {
-                await updateDoc(doc(db, 'tasks', currentEditingId), { notes: modalNotes.value });
+                await updateDoc(doc(db, 'tasks', currentEditingId), { 
+                    notes: modalNotes.value,
+                    text: modalTitleInput.value // Saves the renamed title
+                });
                 modal.style.display = 'none'; 
             }
         });
+
+        document.getElementById('delete-task-btn').addEventListener('click', async () => {
+            if (currentEditingId && confirm("Are you sure you want to permanently delete this task?")) {
+                await deleteDoc(doc(db, 'tasks', currentEditingId));
+                modal.style.display = 'none';
+            }
+        });
+
     </script>
 </body>
 </html>
