@@ -44,6 +44,7 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-list-view, #wiki-content-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
+        #kanban-board { display: flex; gap: 20px; flex-grow: 1; align-items: flex-start; }
         .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; max-height: 100%; }
         .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         .card-list { flex-grow: 1; padding: 5px; min-height: 150px; overflow-y: auto; }
@@ -62,14 +63,21 @@
         .modal-content { background: var(--card-bg); width: 90%; max-width: 750px; height: 85vh; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; box-sizing: border-box; }
         .textarea { flex-grow: 1; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: inherit; font-size: 16px; margin-top: 15px; background: rgba(0,0,0,0.02); color: inherit; outline: none; resize: none; }
         .preview-area { flex-grow: 1; overflow-y: auto; padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-top: 15px; line-height: 1.6; scroll-behavior: smooth; }
-
-        /* Make images fit in Wiki */
         .preview-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
 
         .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; white-space: nowrap; }
         .btn-toggle { background: var(--sidebar); color: var(--text); }
         .btn-toggle.active { background: var(--accent); color: white; }
         .btn-delete { color: #ff4d4f; background: transparent; border: 1px solid #ff4d4f; }
+
+        /* PRINT STYLES */
+        @media print {
+            #sidebar, #mobile-switcher, .wiki-header, .sync-status, .btn, .search-bar, #tag-cloud { display: none !important; }
+            #main-content, #wiki-content-view { display: block !important; padding: 0 !important; width: 100% !important; overflow: visible !important; }
+            body { background: white !important; color: black !important; overflow: visible !important; }
+            .preview-area { border: none !important; padding: 0 !important; overflow: visible !important; }
+            .toc-container { display: none !important; }
+        }
 
         @media (max-width: 768px) {
             #sidebar { display: none; }
@@ -111,7 +119,7 @@
         <div id="main-content">
             <div id="kanban-view">
                 <div id="tag-cloud"></div>
-                <div id="kanban-board" style="display:flex; gap:20px;">
+                <div id="kanban-board">
                     <div class="column" data-status="todo">
                         <div class="column-header">To Do <button id="add-btn" class="btn" style="background:var(--accent); color:white; padding: 2px 10px;">+ Add</button></div>
                         <div class="card-list" id="todo-list"></div>
@@ -142,9 +150,10 @@
                         <div id="wiki-sync-indicator" class="sync-status">Synced</div>
                     </div>
                     <div class="wiki-header-meta">
-                        <div style="font-size: 11px; font-weight: bold;">🏷️ Tag: <input type="text" id="wiki-tag-input" style="border:1px solid var(--border); border-radius:4px; padding:4px; width:120px; font-size:12px; background:transparent; color:inherit;"></div>
+                        <div style="font-size: 11px; font-weight: bold;">🏷️ Tag: <input type="text" id="wiki-tag-input" style="border:1px solid var(--border); border-radius:4px; padding:4px; width:120px; font-size:12px; background:transparent; color:inherit;" placeholder="Project"></div>
                         <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
                         <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
+                        <button id="wiki-export-pdf" class="btn" style="background:var(--border); color:var(--text); font-size:11px;">🖨️ Export PDF</button>
                         <button id="wiki-add-image" class="btn" style="background:var(--border); color:var(--text); font-size:11px;">🖼️ Add Image</button>
                         <button id="delete-wiki-btn" class="btn btn-delete" style="padding:4px 10px; font-size:11px;">Delete</button>
                     </div>
@@ -248,13 +257,14 @@
         }
 
         async function ensureGuideExists() {
-            const q = query(wikiCol, limit(1));
+            const q = query(wikiCol);
             const snap = await getDocs(q);
-            if (snap.empty) {
-                addDoc(wikiCol, {
+            const hasGuide = snap.docs.some(d => d.data().title === "📖 How to Use This Site");
+            if (!hasGuide) {
+                await addDoc(wikiCol, {
                     title: "📖 How to Use This Site",
                     tag: "Guide",
-                    content: "# Getting Started\nWelcome to your Star Trek inspired workspace.\n\n## Kanban Board\n- **To Do**: New tasks.\n- **Doing**: Active projects.\n- **Done**: Completed work.\n- Use the **🧹 Sweep** button to archive the Done column.\n\n## Tagging System\n- Assign tags (like `Mortgage` or `Sunday School`) to cards and pages.\n- Tap the tags at the top to filter everything at once.\n\n## Wiki Power User Tips\n- **Auto-Save**: Just type; it saves automatically.\n- **TOC**: Use `# Section` or `## Subsection` to generate a Jump Menu.\n- **Images**: Click 'Add Image' to insert reference charts via URL.\n- **Timestamps**: See exactly when you last touched a file.",
+                    content: "# Getting Started\nWelcome to your Star Trek inspired workspace.\n\n## Kanban Board\n- **To Do**: New tasks.\n- **Doing**: Active projects.\n- **Done**: Completed work.\n- Use the **🧹 Sweep** button to archive the Done column.\n\n## Tagging System\n- Assign tags (like `Mortgage` or `Sunday School`) to cards and pages.\n- Tap the tags at the top to filter everything at once.\n\n## Wiki Power User Tips\n- **Auto-Save**: Just type; it saves automatically.\n- **TOC**: Use `# Section` or `## Subsection` to generate a Jump Menu.\n- **Images**: Click 'Add Image' to insert reference charts via URL.\n- **PDF Export**: Click 'Export PDF' to print a clean copy of your notes.",
                     lastEdited: serverTimestamp()
                 });
             }
@@ -340,11 +350,7 @@
         }
 
         const handleSearch = (inputId) => {
-            const input = document.getElementById(inputId);
-            input.oninput = () => {
-                const term = input.value.toLowerCase();
-                renderWikiList(term);
-            };
+            document.getElementById(inputId).oninput = (e) => renderWikiList(e.target.value.toLowerCase());
         };
         handleSearch('desktop-wiki-search'); handleSearch('mobile-wiki-search');
 
@@ -354,11 +360,8 @@
             const sortedWiki = [...allWiki].sort((a,b) => (b.data().lastEdited?.seconds || 0) - (a.data().lastEdited?.seconds || 0));
             sortedWiki.forEach(d => {
                 const p = d.data();
-                const contentText = (p.content || '').toLowerCase();
-                const titleText = (p.title || '').toLowerCase();
-                
                 if (currentTagFilter !== 'All' && p.tag !== currentTagFilter) return;
-                if (searchTerm && !titleText.includes(searchTerm) && !contentText.includes(searchTerm)) return;
+                if (searchTerm && !p.title.toLowerCase().includes(searchTerm) && !p.content.toLowerCase().includes(searchTerm)) return;
 
                 const item = document.createElement('div'); item.className = 'nav-item';
                 item.innerHTML = `<span>📄 ${p.title}</span><span class="nav-timestamp">${formatTime(p.lastEdited)}</span>`;
@@ -389,12 +392,14 @@
         setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
         setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'), 'wiki-toc');
 
-        const addImage = (textareaId) => {
+        document.getElementById('wiki-export-pdf').onclick = () => window.print();
+
+        const addImage = (taId) => {
             const url = prompt("Paste the image URL here:");
             if (url) {
-                const ta = document.getElementById(textareaId);
-                ta.value += `\n\n![Image Reference](${url})`;
-                ta.dispatchEvent(new Event('input')); // Trigger autosave
+                const ta = document.getElementById(taId);
+                ta.value += `\n\n![Image](${url})`;
+                ta.dispatchEvent(new Event('input'));
             }
         };
         document.getElementById('wiki-add-image').onclick = () => addImage('wiki-notes');
