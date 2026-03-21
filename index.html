@@ -8,13 +8,12 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* CSS Styling */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f7f7f5; color: #37352f; }
+        /* --- BASE STYLING (Light Mode) --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f7f7f5; color: #37352f; transition: background-color 0.3s, color 0.3s; }
         
-        #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+        #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; transition: 0.3s; }
         
-        /* New Search Bar Styling */
-        #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none; }
+        #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none; transition: 0.3s; }
         #global-search:focus { border-color: #888; box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
 
         .wiki-link { display: block; padding: 8px; margin-bottom: 5px; border-radius: 4px; text-decoration: none; color: #37352f; cursor: pointer; transition: 0.2s;}
@@ -24,7 +23,7 @@
         #main-content { flex-grow: 1; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
         
         #kanban-view { display: flex; flex-direction: column; flex-grow: 1; }
-        #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;}
+        #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; transition: 0.3s; }
 
         #filters { margin-bottom: 20px; display: flex; gap: 10px; }
         .filter-btn { padding: 5px 12px; border: 1px solid #d3d3d3; border-radius: 15px; background: white; cursor: pointer; font-size: 14px; transition: 0.2s; }
@@ -36,7 +35,7 @@
         .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .card-list { display: flex; flex-direction: column; gap: 10px; min-height: 200px; flex-grow: 1; }
         
-        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; }
+        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: 0.3s; }
         .card:active { cursor: grabbing; }
         .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
         .dragging { opacity: 0.5; border: 2px dashed #4338ca; }
@@ -44,22 +43,52 @@
         .tag-container { display: flex; gap: 5px; margin-bottom: 8px; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
         
-        .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px;}
+        .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px; transition: 0.3s;}
         .mode-btn.active { background: #ebebec; font-weight: 600; border-color: #bbb;}
-        .editor-textarea { flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa; margin-top: 15px;}
+        .editor-textarea { flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa; margin-top: 15px; transition: 0.3s;}
         .editor-textarea:focus { background-color: white; border-color: #ccc; }
-        .preview-area { display: none; flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow-y: auto; background-color: white; line-height: 1.6; margin-top: 15px;}
+        .preview-area { display: none; flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow-y: auto; background-color: white; line-height: 1.6; margin-top: 15px; transition: 0.3s;}
         .preview-area h1, .preview-area h2, .preview-area h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .preview-area ul { padding-left: 20px; }
-        .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 20px; align-self: flex-end;}
+        .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 20px; align-self: flex-end; transition: 0.3s;}
         .save-btn:hover { background: #2f2d28; }
 
         #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.3s;}
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;}
         #modal-title { margin: 0; font-size: 24px; }
         #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; margin-left: 10px;}
         #close-modal:hover { color: #333; }
+
+        #theme-toggle { margin-top: auto; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; }
+        #theme-toggle:hover { background: #dfdfdf; }
+
+        /* --- DARK MODE OVERRIDES --- */
+        body.dark-mode { background-color: #121212; color: #e0e0e0; }
+        body.dark-mode #sidebar { background-color: #1e1e1e; border-right-color: #333; }
+        body.dark-mode #global-search { background-color: #2d2d2d; border-color: #444; color: #e0e0e0; }
+        body.dark-mode .wiki-link { color: #e0e0e0; }
+        body.dark-mode .wiki-link:hover { background-color: #2d2d2d; }
+        body.dark-mode .active-nav { background-color: #333; color: #fff; }
+        body.dark-mode #wiki-view { background-color: #1e1e1e; border-color: #333; }
+        body.dark-mode .card { background-color: #1e1e1e; border-color: #333; color: #e0e0e0; }
+        body.dark-mode .filter-btn { background-color: #1e1e1e; color: #e0e0e0; border-color: #444; }
+        body.dark-mode .filter-btn:hover { background-color: #333; }
+        body.dark-mode .filter-btn.active-filter { background-color: #5c5c5c; color: white; border-color: #5c5c5c; }
+        body.dark-mode .mode-btn { background-color: #1e1e1e; color: #e0e0e0; border-color: #444; }
+        body.dark-mode .mode-btn.active { background-color: #333; border-color: #555; }
+        body.dark-mode .editor-textarea, body.dark-mode .preview-area { background-color: #121212; color: #e0e0e0; border-color: #333; }
+        body.dark-mode .editor-textarea:focus { background-color: #1a1a1a; border-color: #555; }
+        body.dark-mode .modal-content { background-color: #1e1e1e; border-color: #333; }
+        body.dark-mode .modal-header { border-bottom-color: #333; }
+        body.dark-mode #close-modal { color: #aaa; }
+        body.dark-mode #close-modal:hover { color: #fff; }
+        body.dark-mode .save-btn { background-color: #444; }
+        body.dark-mode .save-btn:hover { background-color: #555; }
+        body.dark-mode #theme-toggle { border-color: #555; color: #ccc; }
+        body.dark-mode #theme-toggle:hover { background-color: #333; }
+        body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; } /* Softer tag colors for dark mode */
+
     </style>
 </head>
 <body>
@@ -70,10 +99,11 @@
         <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
         
         <h3 style="margin-top: 10px; margin-bottom: 10px; font-size: 14px; color: #777;">WIKI PAGES</h3>
-        <div id="wiki-list">
-            </div>
+        <div id="wiki-list"></div>
         
         <button id="add-wiki-btn" style="margin-top: 15px; background: none; border: 1px dashed #bbb; padding: 8px; border-radius: 4px; cursor: pointer; color: #555;">+ New Page</button>
+
+        <button id="theme-toggle">🌙 Dark Mode</button>
     </div>
 
     <div id="main-content">
@@ -89,7 +119,7 @@
 
             <div id="kanban-board">
                 <div class="column" data-status="todo">
-                    <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:white; border:1px solid #ccc; border-radius:4px; padding:2px 8px;">+ New</button></div>
+                    <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:none; border:1px solid #888; border-radius:4px; padding:2px 8px; color: inherit;">+ New</button></div>
                     <div class="card-list" id="todo-list"></div>
                 </div>
                 <div class="column" data-status="doing">
@@ -152,14 +182,36 @@
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        // --- GLOBAL VARIABLES ---
+        // --- THEME TOGGLE LOGIC ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        
+        // 1. Check if user already saved a preference
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeToggleBtn.innerText = '☀️ Light Mode';
+        }
+
+        // 2. Listen for clicks to change it
+        themeToggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+                themeToggleBtn.innerText = '☀️ Light Mode';
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeToggleBtn.innerText = '🌙 Dark Mode';
+            }
+        });
+
+
+        // --- GLOBAL VARIABLES & DOM ---
         let draggedCardId = null;
         let currentEditingId = null;
         let currentWikiId = null;
         let currentFilter = 'All'; 
-        let currentSearchTerm = ''; // Tracks what is in the search box
+        let currentSearchTerm = ''; 
 
-        // --- DOM ELEMENTS ---
         const kanbanView = document.getElementById('kanban-view');
         const wikiView = document.getElementById('wiki-view');
         const navKanban = document.getElementById('nav-kanban');
@@ -173,45 +225,30 @@
             document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
         });
 
-        // --- CORE FILTERING ENGINE (Handles both Tags & Search) ---
+        // --- FILTERING ENGINE ---
         function applyFilters() {
             const filterValue = currentFilter.toLowerCase();
             const searchValue = currentSearchTerm.toLowerCase();
 
-            // 1. Filter Kanban Cards
             document.querySelectorAll('.card').forEach(card => {
                 const tagElement = card.querySelector('.tag');
                 const tagText = tagElement ? tagElement.innerText.toLowerCase() : '';
-                const cardText = card.innerText.toLowerCase(); // Searches the title and tag
+                const cardText = card.innerText.toLowerCase();
 
                 const matchesTag = (filterValue === 'all' || tagText === filterValue);
                 const matchesSearch = cardText.includes(searchValue);
 
-                if (matchesTag && matchesSearch) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
+                card.style.display = (matchesTag && matchesSearch) ? 'block' : 'none';
             });
 
-            // 2. Filter Wiki Links in Sidebar
             document.querySelectorAll('.dynamic-wiki-link').forEach(link => {
                 const linkText = link.innerText.toLowerCase();
-                if (linkText.includes(searchValue)) {
-                    link.style.display = 'block';
-                } else {
-                    link.style.display = 'none';
-                }
+                link.style.display = linkText.includes(searchValue) ? 'block' : 'none';
             });
         }
 
-        // --- SEARCH EVENT LISTENER ---
-        searchInput.addEventListener('input', (e) => {
-            currentSearchTerm = e.target.value;
-            applyFilters();
-        });
+        searchInput.addEventListener('input', (e) => { currentSearchTerm = e.target.value; applyFilters(); });
 
-        // --- TAG FILTER EVENT LISTENERS ---
         const filterButtons = document.querySelectorAll('.filter-btn');
         filterButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -266,7 +303,7 @@
 
                 wikiList.appendChild(link);
             });
-            applyFilters(); // Re-apply search if new wiki page comes in
+            applyFilters(); 
         });
 
         document.getElementById('add-wiki-btn').addEventListener('click', async () => {
@@ -279,7 +316,7 @@
                 await updateDoc(doc(db, 'wiki', currentWikiId), { content: wikiNotes.value });
                 const btn = document.getElementById('wiki-save-btn');
                 btn.innerText = "Saved!"; btn.style.backgroundColor = "#15803d";
-                setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = "#37352f"; }, 2000);
+                setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = ""; }, 2000);
             }
         });
 
@@ -325,7 +362,7 @@
                 if (task.status === 'doing') document.getElementById('doing-list').appendChild(card);
                 if (task.status === 'done') document.getElementById('done-list').appendChild(card);
             });
-            applyFilters(); // Apply search when data loads
+            applyFilters(); 
         });
 
         document.querySelectorAll('.card-list').forEach(list => {
