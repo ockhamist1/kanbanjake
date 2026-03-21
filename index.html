@@ -24,7 +24,7 @@
         #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
         
-        /* --- SIDEBAR (Desktop Only) --- */
+        /* --- SIDEBAR (Desktop) --- */
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
         .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
@@ -38,7 +38,7 @@
 
         /* --- CONTENT AREAS --- */
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
-        #kanban-view, #wiki-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        #kanban-view, #wiki-list-view, #wiki-content-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
 
         /* --- KANBAN BOARD --- */
         #kanban-board { display: flex; gap: 20px; flex-grow: 1; }
@@ -46,10 +46,10 @@
         .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; font-size: 15px; }
         .card-list { flex-grow: 1; padding: 5px; min-height: 150px; }
         
-        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; position: relative; touch-action: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        /* Touch Action: None is the absolute requirement for mobile Firefox dragging */
+        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; position: relative; touch-action: none; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .handle { color: #ccc; margin-right: 10px; cursor: grab; font-size: 18px; }
         
-        /* --- COUNTDOWN BADGE --- */
         .countdown { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-top: 8px; display: inline-block; }
         .overdue { background: #fee2e2; color: #ef4444; }
         .soon { background: #ffedd5; color: #f59e0b; }
@@ -72,17 +72,16 @@
         /* --- MOBILE RE-DESIGN --- */
         @media (max-width: 768px) {
             #sidebar { display: none; }
-            #mobile-header { display: flex; background: var(--sidebar); padding: 15px; border-bottom: 1px solid var(--border); font-weight: bold; justify-content: center; }
             #mobile-switcher { display: flex; }
             #main-content { padding-bottom: 65px; }
             #kanban-board { overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px; gap: 15px; }
             .column { min-width: 88vw; scroll-snap-align: center; }
-            #kanban-view, #wiki-view { padding: 15px; }
+            #kanban-view, #wiki-list-view, #wiki-content-view { padding: 15px; }
             .modal-content { height: 92vh; padding: 20px; }
         }
     </style>
 </head>
-<body>
+<body class="light-mode">
 
     <div id="login-screen">
         <div class="login-box">
@@ -111,8 +110,8 @@
             <div class="sidebar-section-label">Main</div>
             <div id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</div>
             
-            <div class="sidebar-section-label">Wiki Pages</div>
-            <div id="wiki-list" style="flex-grow: 1; overflow-y: auto;"></div>
+            <div class="sidebar-section-label">All Pages</div>
+            <div id="wiki-nav-list" style="flex-grow: 1; overflow-y: auto;"></div>
             
             <button id="add-wiki-btn" class="btn" style="background:none; border: 1px dashed #888; color: #888; width: 100%; margin-top: 10px;">+ New Page</button>
             
@@ -140,18 +139,28 @@
                 </div>
             </div>
 
-            <div id="wiki-view" style="display: none;">
+            <div id="wiki-list-view" style="display: none;">
+                <h2 style="margin-top:0">Wiki Library</h2>
+                <div id="wiki-mobile-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                <button id="add-wiki-mobile" class="btn" style="margin-top: 20px; border: 1px dashed #888;">+ Create New Page</button>
+            </div>
+
+            <div id="wiki-content-view" style="display: none;">
+                <div id="wiki-back-btn" style="display: none; color: #4338ca; cursor: pointer; margin-bottom: 15px; font-weight: bold;">← All Pages</div>
                 <input type="text" id="wiki-title-display" class="title-input">
-                <div style="margin-top: 10px;">
-                    <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
-                    <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
+                
+                <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
+                        <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
+                    </div>
+                    <button id="delete-wiki-btn" class="btn btn-delete">Delete</button>
                 </div>
+
                 <textarea id="wiki-notes" class="textarea" style="display:none;"></textarea>
                 <div id="wiki-preview" class="preview-area"></div>
-                <div style="margin-top: 20px; display: flex; justify-content: space-between;">
-                    <button id="delete-wiki-btn" class="btn btn-delete">Delete Page</button>
-                    <button id="wiki-save-btn" class="btn btn-save">Save Page</button>
-                </div>
+                
+                <button id="wiki-save-btn" class="btn btn-save" style="margin-top: 20px; align-self: flex-end;">Save Page</button>
             </div>
         </div>
     </div>
@@ -159,7 +168,6 @@
     <div id="editor-modal">
         <div class="modal-content">
             <button id="close-modal" style="background: none; border: none; font-size: 28px; color: #888; cursor: pointer; position: absolute; right: 20px; top: 20px;">&times;</button>
-            
             <input type="text" id="modal-title-display" class="title-input">
             
             <div style="display: flex; gap: 15px; align-items: center; margin-top: 10px;">
@@ -204,8 +212,6 @@
         const wikiCol = collection(db, "wiki");
 
         // --- THEME ---
-        const themeToggle = document.getElementById('theme-toggle');
-        const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
         const applyTheme = (t) => {
             if (t === 'dark') {
                 document.body.classList.add('dark-mode');
@@ -217,7 +223,10 @@
             localStorage.setItem('theme', t);
         };
         applyTheme(localStorage.getItem('theme') || 'light');
-        themeToggle.onclick = mobileThemeToggle.onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
+        
+        document.getElementById('theme-toggle').onclick = document.getElementById('mobile-theme-toggle').onclick = () => {
+            applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
+        };
 
         // --- AUTH ---
         let curTaskId = null, curWikiId = null;
@@ -234,43 +243,50 @@
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // --- MOBILE SWITCHER ---
+        // --- VIEW CONTROLS ---
+        const kanbanView = document.getElementById('kanban-view');
+        const wikiListView = document.getElementById('wiki-list-view');
+        const wikiContentView = document.getElementById('wiki-content-view');
         const taskBtn = document.getElementById('switch-tasks');
         const wikiBtn = document.getElementById('switch-wiki');
-        const kanbanView = document.getElementById('kanban-view');
-        const wikiView = document.getElementById('wiki-view');
+
+        function showView(view) {
+            [kanbanView, wikiListView, wikiContentView].forEach(v => v.style.display = 'none');
+            view.style.display = 'flex';
+            if (window.innerWidth <= 768) {
+                document.getElementById('wiki-back-btn').style.display = (view === wikiContentView) ? 'block' : 'none';
+            }
+        }
 
         taskBtn.onclick = () => {
-            kanbanView.style.display = 'flex'; wikiView.style.display = 'none';
+            showView(kanbanView);
             taskBtn.classList.add('active'); wikiBtn.classList.remove('active');
         };
         wikiBtn.onclick = () => {
-            kanbanView.style.display = 'none'; wikiView.style.display = 'flex';
+            if (window.innerWidth <= 768) showView(wikiListView);
+            else showView(wikiContentView);
             wikiBtn.classList.add('active'); taskBtn.classList.remove('active');
-            if(!curWikiId && document.querySelector('.wiki-item')) document.querySelector('.wiki-item').click();
         };
+        document.getElementById('wiki-back-btn').onclick = () => showView(wikiListView);
+        document.getElementById('nav-kanban').onclick = taskBtn.onclick;
 
+        // --- APP LOGIC ---
         function calculateCountdown(dateStr) {
             if (!dateStr) return null;
-            const now = new Date();
-            const due = new Date(dateStr + "T23:59:59");
-            const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-            
+            const diff = Math.ceil((new Date(dateStr + "T23:59:59") - new Date()) / (1000 * 60 * 60 * 24));
             if (diff < 0) return { text: "OVERDUE", class: "overdue" };
             if (diff === 0) return { text: "DUE TODAY", class: "overdue" };
-            if (diff <= 3) return { text: `${diff} DAYS LEFT`, class: "soon" };
-            return { text: `${diff} DAYS LEFT`, class: "later" };
+            return diff <= 3 ? { text: `${diff} DAYS LEFT`, class: "soon" } : { text: `${diff} DAYS LEFT`, class: "later" };
         }
 
         function startApp() {
-            // DRAG AND DROP
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 new Sortable(document.getElementById(id), {
                     group: 'kanban', animation: 150, delay: 300, delayOnTouchOnly: true,
                     forceFallback: true, fallbackOnBody: true,
                     onEnd: (evt) => {
-                        const newStatus = evt.to.parentElement.getAttribute('data-status');
                         const taskId = evt.item.getAttribute('data-id');
+                        const newStatus = evt.to.parentElement.getAttribute('data-status');
                         if (taskId) updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
                     }
                 });
@@ -282,49 +298,51 @@
                     const t = d.data();
                     const card = document.createElement('div');
                     card.className = 'card'; card.setAttribute('data-id', d.id);
-                    
                     const cd = calculateCountdown(t.dueDate);
-                    const countdownHtml = cd ? `<div class="countdown ${cd.class}">${cd.text}</div>` : '';
-                    
-                    card.innerHTML = `<span class="handle">⠿</span> ${t.text} ${countdownHtml}`;
+                    card.innerHTML = `<span class="handle">⠿</span> ${t.text} ${cd ? `<div class="countdown ${cd.class}">${cd.text}</div>` : ''}`;
                     card.onclick = (e) => { if(e.target.className !== 'handle') openTask(d.id, t); };
                     document.getElementById(`${t.status}-list`).appendChild(card);
                 });
             });
 
             onSnapshot(wikiCol, (snap) => {
-                const list = document.getElementById('wiki-list');
-                list.innerHTML = '';
+                const desktopList = document.getElementById('wiki-nav-list');
+                const mobileList = document.getElementById('wiki-mobile-list');
+                desktopList.innerHTML = ''; mobileList.innerHTML = '';
                 snap.forEach(d => {
                     const p = d.data();
-                    const item = document.createElement('div');
-                    item.className = 'nav-item wiki-item'; item.innerText = `📄 ${p.title}`;
-                    item.onclick = () => {
-                        curWikiId = d.id;
-                        openWiki(p);
-                        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
-                        item.classList.add('active-nav');
+                    const createItem = (container) => {
+                        const item = document.createElement('div');
+                        item.className = container === desktopList ? 'nav-item' : 'card';
+                        item.innerText = `📄 ${p.title}`;
+                        item.onclick = () => {
+                            curWikiId = d.id;
+                            openWiki(p);
+                            if (container === desktopList) {
+                                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+                                item.classList.add('active-nav');
+                            }
+                        };
+                        container.appendChild(item);
                     };
-                    list.appendChild(item);
+                    createItem(desktopList); createItem(mobileList);
                 });
             });
         }
 
-        // PREVIEW / EDIT TOGGLES
         const setupToggle = (prefix, notesEl, previewEl) => {
             const btnP = document.getElementById(`${prefix}-mode-preview`);
             const btnE = document.getElementById(`${prefix}-mode-edit`);
             btnP.onclick = () => {
                 notesEl.style.display = 'none'; previewEl.style.display = 'block';
                 btnP.classList.add('active'); btnE.classList.remove('active');
-                previewEl.innerHTML = marked.parse(notesEl.value);
+                previewEl.innerHTML = marked.parse(notesEl.value || "");
             };
             btnE.onclick = () => {
                 notesEl.style.display = 'block'; previewEl.style.display = 'none';
                 btnE.classList.add('active'); btnP.classList.remove('active');
             };
         };
-
         setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
         setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'));
 
@@ -333,20 +351,16 @@
             document.getElementById('modal-title-display').value = t.text;
             document.getElementById('task-due-date').value = t.dueDate || '';
             document.getElementById('modal-notes').value = t.notes || '';
-            document.getElementById('task-mode-preview').click(); // Default to Preview
+            document.getElementById('task-mode-preview').click();
             document.getElementById('editor-modal').style.display = 'flex';
         }
 
         function openWiki(p) {
-            document.getElementById('kanban-view').style.display = 'none';
-            document.getElementById('wiki-view').style.display = 'flex';
-            wikiBtn.classList.add('active'); taskBtn.classList.remove('active');
+            showView(wikiContentView);
             document.getElementById('wiki-title-display').value = p.title;
             document.getElementById('wiki-notes').value = p.content || '';
-            document.getElementById('wiki-mode-preview').click(); // Default to Preview
+            document.getElementById('wiki-mode-preview').click();
         }
-
-        document.getElementById('nav-kanban').onclick = taskBtn.onclick;
 
         document.getElementById('save-notes').onclick = () => {
             updateDoc(doc(db, 'tasks', curTaskId), { 
@@ -365,24 +379,12 @@
             alert("Saved!");
         };
 
-        document.getElementById('add-btn').onclick = () => {
-            const t = prompt("Task Name?");
-            if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: 'General', notes: '' });
-        };
-
-        document.getElementById('add-wiki-btn').onclick = () => {
-            const t = prompt("Page Title?");
-            if(t) addDoc(wikiCol, { title: t, content: '' });
-        };
-
-        document.getElementById('delete-task-btn').onclick = () => {
-            if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; }
-        };
-
-        document.getElementById('delete-wiki-btn').onclick = () => {
-            if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); taskBtn.click(); }
-        };
-
+        const createWiki = () => { const t = prompt("Page Title?"); if(t) addDoc(wikiCol, { title: t, content: '' }); };
+        document.getElementById('add-wiki-btn').onclick = document.getElementById('add-wiki-mobile').onclick = createWiki;
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task Name?"); if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: 'General', notes: '' }); };
+        
+        document.getElementById('delete-task-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; } };
+        document.getElementById('delete-wiki-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); wikiBtn.click(); } };
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
     </script>
 </body>
