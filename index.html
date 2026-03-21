@@ -26,9 +26,10 @@
         
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
-        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 14px; transition: 0.2s; overflow: hidden; }
         .nav-item:hover { background: var(--nav-hover); }
         .active-nav { background: var(--border) !important; font-weight: 600; }
+        .nav-timestamp { font-size: 9px; color: #888; text-transform: uppercase; }
 
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         .switch-btn { background: none; border: none; color: var(--text); display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: bold; opacity: 0.6; }
@@ -100,7 +101,7 @@
     <div id="app-container" style="display:none; width: 100%;">
         <div id="sidebar">
             <div class="sidebar-section-label">Main</div>
-            <div id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</div>
+            <div id="nav-kanban" class="nav-item active-nav"><span>📊 Kanban Board</span></div>
             <div class="sidebar-section-label">Wiki Library</div>
             <input type="text" id="desktop-wiki-search" class="search-bar" placeholder="Search pages...">
             <div id="wiki-nav-list" style="flex-grow: 1; overflow-y: auto;"></div>
@@ -153,7 +154,6 @@
                         <button id="delete-wiki-btn" class="btn btn-delete" style="padding: 4px 10px; font-size: 11px;">Delete Page</button>
                     </div>
                 </div>
-
                 <textarea id="wiki-notes" class="textarea" style="display:none;"></textarea>
                 <div id="wiki-preview" class="preview-area"></div>
             </div>
@@ -187,13 +187,16 @@
                 <button class="btn" style="background:var(--bg); flex:1" onclick="moveTask('done')">Done</button>
             </div>
             
-            <button id="delete-task-btn" class="btn btn-delete" style="margin-top: 15px; align-self: flex-start;">Delete Task</button>
+            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <button id="delete-task-btn" class="btn btn-delete">Delete Task</button>
+                <div id="task-last-edited" style="font-size: 10px; color: #888;"></div>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -214,7 +217,6 @@
 
         let curTaskId = null, curWikiId = null, currentTagFilter = 'All', allTasks = [], allWiki = [];
 
-        // --- DEBOUNCE FUNCTION ---
         const debounce = (func, wait) => {
             let timeout;
             return (...args) => {
@@ -223,7 +225,17 @@
             };
         };
 
-        // --- THEME ---
+        const formatTime = (ts) => {
+            if (!ts) return '';
+            const date = ts.toDate ? ts.toDate() : new Date(ts);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            if (diff < 60) return 'JUST NOW';
+            if (diff < 3600) return Math.floor(diff/60) + 'm AGO';
+            if (diff < 86400) return Math.floor(diff/3600) + 'h AGO';
+            return date.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+        };
+
         const applyTheme = (t) => {
             document.body.classList.toggle('dark-mode', t === 'dark');
             localStorage.setItem('theme', t);
@@ -231,7 +243,6 @@
         applyTheme(localStorage.getItem('theme') || 'light');
         document.getElementById('theme-toggle').onclick = document.getElementById('mobile-theme-toggle').onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
 
-        // --- NAVIGATION ---
         const kanbanView = document.getElementById('kanban-view'), wikiListView = document.getElementById('wiki-list-view'), wikiContentView = document.getElementById('wiki-content-view');
         const taskBtn = document.getElementById('switch-tasks'), wikiBtn = document.getElementById('switch-wiki');
 
@@ -248,11 +259,9 @@
             document.getElementById('nav-kanban').classList.add('active-nav'); 
         };
         taskBtn.onclick = document.getElementById('nav-kanban').onclick = goToKanban;
-        
         wikiBtn.onclick = () => { if (window.innerWidth <= 768) showView(wikiListView); else showView(wikiContentView); wikiBtn.classList.add('active'); taskBtn.classList.remove('active'); };
         document.getElementById('wiki-back-btn').onclick = () => showView(wikiListView);
 
-        // --- AUTO-SAVE LOGIC ---
         const setStatus = (id, status) => {
             const el = document.getElementById(id);
             el.innerText = status;
@@ -266,7 +275,8 @@
                 text: document.getElementById('modal-title-display').value,
                 notes: document.getElementById('modal-notes').value,
                 dueDate: document.getElementById('task-due-date').value,
-                tag: document.getElementById('task-tag-input').value
+                tag: document.getElementById('task-tag-input').value,
+                lastEdited: serverTimestamp()
             });
             setStatus('task-sync-indicator', 'Synced');
         }, 1500);
@@ -277,20 +287,15 @@
             await updateDoc(doc(db, 'wiki', curWikiId), { 
                 title: document.getElementById('wiki-title-display').value,
                 content: document.getElementById('wiki-notes').value,
-                tag: document.getElementById('wiki-tag-input').value
+                tag: document.getElementById('wiki-tag-input').value,
+                lastEdited: serverTimestamp()
             });
             setStatus('wiki-sync-indicator', 'Synced');
         }, 1500);
 
-        // Bind events
-        ['modal-title-display', 'task-due-date', 'task-tag-input', 'modal-notes'].forEach(id => {
-            document.getElementById(id).addEventListener('input', autoSaveTask);
-        });
-        ['wiki-title-display', 'wiki-tag-input', 'wiki-notes'].forEach(id => {
-            document.getElementById(id).addEventListener('input', autoSaveWiki);
-        });
+        ['modal-title-display', 'task-due-date', 'task-tag-input', 'modal-notes'].forEach(id => document.getElementById(id).addEventListener('input', autoSaveTask));
+        ['wiki-title-display', 'wiki-tag-input', 'wiki-notes'].forEach(id => document.getElementById(id).addEventListener('input', autoSaveWiki));
 
-        // --- CORE RENDERING ---
         function renderBoard() {
             updateTagCloud();
             ['todo-list', 'doing-list', 'done-list'].forEach(id => document.getElementById(id).innerHTML = '');
@@ -324,20 +329,22 @@
             allWiki.forEach(d => {
                 const p = d.data();
                 if (currentTagFilter !== 'All' && p.tag !== currentTagFilter) return;
-                const item = document.createElement('div'); item.className = 'nav-item'; item.innerText = `📄 ${p.title}`;
+                const item = document.createElement('div'); item.className = 'nav-item';
+                const timeStr = formatTime(p.lastEdited);
+                item.innerHTML = `<span>📄 ${p.title}</span><span class="nav-timestamp">${timeStr}</span>`;
                 item.onclick = () => { curWikiId = d.id; openWiki(p); };
                 const dt = item.cloneNode(true); dt.onclick = item.onclick; dList.appendChild(dt);
-                const mt = item.cloneNode(true); mt.className = 'card'; mt.onclick = item.onclick; mList.appendChild(mt);
+                const mt = item.cloneNode(true); mt.className = 'card'; mt.style.flexDirection = 'row'; mt.style.justifyContent = 'space-between'; mt.onclick = item.onclick; mList.appendChild(mt);
             });
         }
 
         function startApp() {
-            onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderBoard(); });
-            onSnapshot(wikiCol, (snap) => { allWiki = snap.docs; renderWikiList(); updateTagCloud(); });
+            onSnapshot(query(tasksCol, orderBy("text")), (snap) => { allTasks = snap.docs; renderBoard(); });
+            onSnapshot(query(wikiCol, orderBy("lastEdited", "desc")), (snap) => { allWiki = snap.docs; renderWikiList(); updateTagCloud(); });
             ['todo-list', 'doing-list', 'done-list'].forEach(id => new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, delay: 200, delayOnTouchOnly: true, onEnd: (evt) => { const taskId = evt.item.getAttribute('data-id'); const newStatus = evt.to.parentElement.getAttribute('data-status'); if (taskId) updateDoc(doc(db, 'tasks', taskId), { status: newStatus }); } }));
         }
 
-        window.moveTask = async (status) => { if (curTaskId) { await updateDoc(doc(db, 'tasks', curTaskId), { status: status }); document.getElementById('editor-modal').style.display = 'none'; } };
+        window.moveTask = async (status) => { if (curTaskId) { await updateDoc(doc(db, 'tasks', curTaskId), { status: status, lastEdited: serverTimestamp() }); document.getElementById('editor-modal').style.display = 'none'; } };
 
         const setupToggle = (prefix, notesEl, previewEl) => {
             const btnP = document.getElementById(`${prefix}-mode-preview`), btnE = document.getElementById(`${prefix}-mode-edit`);
@@ -347,15 +354,15 @@
         setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
         setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'));
 
-        function openTask(id, t) { curTaskId = id; document.getElementById('modal-title-display').value = t.text; document.getElementById('task-due-date').value = t.dueDate || ''; document.getElementById('task-tag-input').value = t.tag || ''; document.getElementById('modal-notes').value = t.notes || ''; setStatus('task-sync-indicator', 'Synced'); document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display = 'flex'; }
+        function openTask(id, t) { curTaskId = id; document.getElementById('modal-title-display').value = t.text; document.getElementById('task-due-date').value = t.dueDate || ''; document.getElementById('task-tag-input').value = t.tag || ''; document.getElementById('modal-notes').value = t.notes || ''; document.getElementById('task-last-edited').innerText = 'Last edited: ' + formatTime(t.lastEdited); setStatus('task-sync-indicator', 'Synced'); document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display = 'flex'; }
         function openWiki(p) { showView(wikiContentView); document.getElementById('wiki-title-display').value = p.title; document.getElementById('wiki-tag-input').value = p.tag || ''; document.getElementById('wiki-notes').value = p.content || ''; setStatus('wiki-sync-indicator', 'Synced'); document.getElementById('wiki-mode-preview').click(); }
 
-        document.getElementById('add-wiki-btn').onclick = document.getElementById('add-wiki-mobile').onclick = () => { const t = prompt("Page Title?"); if(t) addDoc(wikiCol, { title: t, content: '', tag: currentTagFilter !== 'All' ? currentTagFilter : '' }); };
-        document.getElementById('add-btn').onclick = () => { const t = prompt("Task Name?"); if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: currentTagFilter !== 'All' ? currentTagFilter : 'General', notes: '' }); };
+        document.getElementById('add-wiki-btn').onclick = document.getElementById('add-wiki-mobile').onclick = () => { const t = prompt("Page Title?"); if(t) addDoc(wikiCol, { title: t, content: '', tag: currentTagFilter !== 'All' ? currentTagFilter : '', lastEdited: serverTimestamp() }); };
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task Name?"); if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: currentTagFilter !== 'All' ? currentTagFilter : 'General', notes: '', lastEdited: serverTimestamp() }); };
         document.getElementById('delete-task-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; } };
         document.getElementById('delete-wiki-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); goToKanban(); } };
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
-        document.getElementById('bulk-archive-btn').onclick = () => { if(confirm("Archive all completed tasks?")) { allTasks.forEach(d => { if(d.data().status === 'done') updateDoc(doc(db, 'tasks', d.id), { status: 'archived' }); }); } };
+        document.getElementById('bulk-archive-btn').onclick = () => { if(confirm("Archive all completed tasks?")) { allTasks.forEach(d => { if(d.data().status === 'done') updateDoc(doc(db, 'tasks', d.id), { status: 'archived', lastEdited: serverTimestamp() }); }); } };
 
         onAuthStateChanged(auth, (user) => { if (user) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-container').style.display = 'flex'; startApp(); } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; } });
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
