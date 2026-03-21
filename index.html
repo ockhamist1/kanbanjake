@@ -4,79 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jake's Workspace</title>
-    
     <link rel="icon" type="image/jpeg" href="logo.jpg">
-    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-
     <style>
-        :root { 
-            --bg: #f7f7f5; --text: #37352f; --sidebar: #ebebec; --border: #e0e0e0; 
-            --card-bg: #ffffff; --accent: #4338ca; --nav-hover: rgba(0,0,0,0.05);
-        }
-        body.dark-mode { 
-            --bg: #121212; --text: #e0e0e0; --sidebar: #1e1e1e; --border: #333; 
-            --card-bg: #1e1e1e; --accent: #818cf8; --nav-hover: rgba(255,255,255,0.05);
-        }
-
+        :root { --bg: #f7f7f5; --text: #37352f; --sidebar: #ebebec; --border: #e0e0e0; --card-bg: #ffffff; --accent: #4338ca; --nav-hover: rgba(0,0,0,0.05); }
+        body.dark-mode { --bg: #121212; --text: #e0e0e0; --sidebar: #1e1e1e; --border: #333; --card-bg: #1e1e1e; --accent: #818cf8; --nav-hover: rgba(255,255,255,0.05); }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); overflow: hidden; display: flex; transition: background 0.3s; }
-        
         #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e; opacity: 0; z-index: 9999; pointer-events: none; transition: 0.3s; }
         #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
-
         #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); width: 320px; }
-        
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; font-size: 14px; transition: 0.1s; display: block; width: 100%; border: none; background: none; text-align: left; color: inherit; }
         .nav-item:hover { background: var(--nav-hover); }
         .active-nav { background: var(--border) !important; font-weight: 600; }
-
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-list-view, #wiki-content-view, #news-view, #freebies-view { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
-
         .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
         .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .news-card.read { opacity: 0.4; filter: grayscale(1); order: 1; }
         .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 12px; }
         .news-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; }
         .read-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; }
-
         .column { min-width: 300px; display: flex; flex-direction: column; margin-right: 20px; }
         .card-list { min-height: 300px; padding-bottom: 100px; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 14px; padding: 10px; opacity: 0.6; flex: 1; }
         .switch-btn.active { opacity: 1; color: var(--accent); font-weight: bold; }
-
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
-
         @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } #kanban-board { flex-direction: column; } .column { width: 100%; margin-right: 0; margin-bottom: 30px; } }
     </style>
 </head>
 <body class="light-mode">
-
     <div id="sync-indicator"></div>
-
     <div id="login-screen">
-        <div class="login-box">
-            <h2>Jake's Workspace</h2>
-            <button id="login-btn" class="btn btn-active" style="width:100%; padding:12px;">Sign in with Google</button>
-        </div>
+        <div class="login-box"><h2>Jake's Workspace</h2><button id="login-btn" class="btn btn-active" style="width:100%; padding:12px;">Sign in with Google</button></div>
     </div>
-
     <div id="mobile-switcher">
         <button id="switch-tasks" class="switch-btn active">📊<br>BOARD</button>
         <button id="switch-news" class="switch-btn">📰<br>AP</button>
         <button id="switch-freebies" class="switch-btn">🎁<br>DEALS</button>
         <button id="switch-wiki" class="switch-btn">📄<br>WIKI</button>
     </div>
-
     <div id="app-container" style="display:none; width: 100%;">
         <div id="sidebar">
             <div class="sidebar-section-label">Main</div>
@@ -86,12 +60,8 @@
             <div class="sidebar-section-label">Wiki Library</div>
             <div id="sidebar-wiki-list" style="flex-grow: 1; overflow-y: auto;"></div>
             <button id="add-wiki-btn" class="nav-item" style="border: 1px dashed #888; color: #888; text-align:center; margin-top:10px;">+ New Page</button>
-            <div style="margin-top: 20px; display: flex; gap: 8px;">
-                <button id="theme-toggle" class="btn" style="flex:1;">🌙 Mode</button>
-                <button id="logout-btn" class="btn" style="flex:1;">🚪 Out</button>
-            </div>
+            <div style="margin-top: 20px; display: flex; gap: 8px;"><button id="theme-toggle" class="btn" style="flex:1;">🌙 Mode</button><button id="logout-btn" class="btn" style="flex:1;">🚪 Out</button></div>
         </div>
-
         <div id="main-content">
             <div id="kanban-view">
                 <div id="kanban-board" style="display:flex;">
@@ -100,33 +70,19 @@
                     <div class="column" data-status="done"><div class="column-header" style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" class="card-list"></div></div>
                 </div>
             </div>
-
-            <div id="news-view" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button id="sync-ap-btn" class="btn">🔄 Sync</button></div>
-                <div id="news-container" class="news-grid"><p>Establishing uplink...</p></div>
-            </div>
-
-            <div id="freebies-view" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Freebies</h2><button id="sync-deals-btn" class="btn">🔄 Refresh Deals</button></div>
-                <div id="freebies-container" class="news-grid"><p>Scanning deal frequencies...</p></div>
-            </div>
-
+            <div id="news-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button id="sync-ap-btn" class="btn">🔄 Sync</button></div><div id="news-container" class="news-grid"></div></div>
+            <div id="freebies-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Freebies</h2><button id="sync-deals-btn" class="btn">🔄 Refresh Deals</button></div><div id="freebies-container" class="news-grid"></div></div>
             <div id="wiki-list-view" style="display:none;"><h2>Wiki Library</h2><div id="mobile-wiki-list"></div></div>
             <div id="wiki-content-view" style="display: none;">
                 <div class="wiki-header" style="border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:10px;">
                     <input type="text" id="wiki-title-display" style="font-size:24px; font-weight:800; border:none; background:transparent; width:100%; color:inherit;">
-                    <div style="margin-top:10px; display:flex; gap:10px;">
-                        <button id="wiki-mode-preview" class="btn btn-active">Preview</button>
-                        <button id="wiki-mode-edit" class="btn">Edit</button>
-                        <button id="list-wiki-btn" class="btn">List</button>
-                    </div>
+                    <div style="margin-top:10px; display:flex; gap:10px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button><button id="list-wiki-btn" class="btn">List</button></div>
                 </div>
-                <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:15px;"></textarea>
+                <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:15px; font-size:16px;"></textarea>
                 <div id="wiki-preview" style="line-height:1.6;"></div>
             </div>
         </div>
     </div>
-
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
         <div class="modal-content" style="background:var(--card-bg); width:95%; max-width:750px; padding:30px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
@@ -136,26 +92,20 @@
             <div id="modal-preview" style="line-height:1.6;"></div>
         </div>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-
         let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false, sortables = [], userReadList = [];
-
         const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'light');
         document.getElementById('theme-toggle').onclick = () => { const dark = !document.body.classList.contains('dark-mode'); applyTheme(dark ? 'dark' : 'light'); };
-
         const showSync = (active) => document.getElementById('sync-indicator').classList.toggle('active', active);
-
         onAuthStateChanged(auth, async (u) => {
             if(u) {
                 document.getElementById('login-screen').style.display = 'none';
@@ -163,35 +113,43 @@
                 const ud = await getDoc(doc(db, 'users', u.uid));
                 userReadList = ud.exists() ? ud.data().readArticles || [] : [];
                 fetchAP(); fetchFreebies();
-            } else {
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('app-container').style.display = 'none';
-            }
+            } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; }
         });
-
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
-
         async function toggleRead(link, read, card) {
             if (read) { if (!userReadList.includes(link)) userReadList.push(link); card.classList.add('read'); card.style.order = "1"; }
             else { userReadList = userReadList.filter(l => l !== link); card.classList.remove('read'); card.style.order = "0"; }
             if(auth.currentUser) { showSync(true); await setDoc(doc(db, 'users', auth.currentUser.uid), { readArticles: userReadList }, { merge: true }); showSync(false); }
         }
-
-        // --- RESILIENT AP TUNER ---
-        window.fetchAP = async () => {
-            const container = document.getElementById('news-container');
-            container.innerHTML = '<p>Syncing AP Frequency...</p>';
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}&cb=${Date.now()}`);
-                const json = await res.json();
-                const xmlText = json.contents;
-                const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+        window.fetchSource = async (cid, url, type) => {
+            const container = document.getElementById(cid);
+            container.innerHTML = `<p>Syncing ${type}...</p>`;
+            const proxies = [
+                `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                `https://thingproxy.freeboard.io/fetch/${url}`
+            ];
+            let data = null;
+            for (let proxy of proxies) {
+                try {
+                    const res = await fetch(`${proxy}${proxy.includes('?') ? '&' : '?'}cb=${Date.now()}`);
+                    if (res.ok) { 
+                        const raw = await res.json();
+                        data = raw.contents || raw;
+                        if (data) break;
+                    }
+                } catch (e) { continue; }
+            }
+            if (!data) { container.innerHTML = `<p style="color:red;">${type} Jammed. Try re-syncing.</p>`; return; }
+            if (type === 'AP') {
+                const xml = new DOMParser().parseFromString(data, "text/xml");
                 const items = Array.from(xml.querySelectorAll("item"));
                 container.innerHTML = '';
                 items.forEach((item, i) => {
                     if (i > 24) return;
-                    const title = item.querySelector("title")?.textContent || "Breaking Signal...";
+                    const title = item.querySelector("title")?.textContent || "Breaking Intel...";
                     const link = item.querySelector("link")?.textContent || "#";
                     const isRead = userReadList.includes(link);
                     const card = document.createElement('div');
@@ -202,18 +160,11 @@
                     const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
                     container.appendChild(card);
                 });
-            } catch (e) { container.innerHTML = '<p style="color:red;">AP Jammed. Manual re-sync needed.</p>'; }
-        };
-
-        window.fetchFreebies = async () => {
-            const container = document.getElementById('freebies-container');
-            container.innerHTML = '<p>Syncing Deals...</p>';
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=25')}&cb=${Date.now()}`);
-                const json = await res.json();
-                const items = JSON.parse(json.contents).data.children;
+            } else {
+                const json = typeof data === 'string' ? JSON.parse(data) : data;
+                const items = json.data?.children || [];
                 container.innerHTML = '';
-                items.forEach((item) => {
+                items.forEach(item => {
                     const post = item.data;
                     const link = `https://reddit.com${post.permalink}`;
                     const isRead = userReadList.includes(link);
@@ -225,10 +176,10 @@
                     const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
                     container.appendChild(card);
                 });
-            } catch (e) { container.innerHTML = '<p>Deals Jammed.</p>'; }
+            }
         };
-
-        // --- MASTER CONTAINER LISTENERS (IMMUNE TO WIPE) ---
+        window.fetchAP = () => fetchSource('news-container', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP');
+        window.fetchFreebies = () => fetchSource('freebies-container', 'https://www.reddit.com/r/freebies.json?limit=25', 'DEALS');
         ['todo-list', 'doing-list', 'done-list'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 const card = e.target.closest('.card');
@@ -245,14 +196,12 @@
                 }
             });
         });
-
         const handleWikiClick = (e) => {
             const btn = e.target.closest('.nav-item');
             if (btn) {
                 const wid = btn.getAttribute('data-id');
                 curWikiId = wid; isEditing = false;
-                const docRef = doc(db, 'wiki', wid);
-                getDoc(docRef).then(d => {
+                getDoc(doc(db, 'wiki', wid)).then(d => {
                     document.getElementById('wiki-title-display').value = d.data().title;
                     document.getElementById('wiki-notes').value = d.data().content || '';
                     document.getElementById('wiki-mode-preview').click();
@@ -262,25 +211,18 @@
         };
         document.getElementById('sidebar-wiki-list').addEventListener('click', handleWikiClick);
         document.getElementById('mobile-wiki-list').addEventListener('click', handleWikiClick);
-
         function renderBoard() {
             if (isEditing) return;
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 const list = document.getElementById(id); list.innerHTML = '';
                 const status = id.split('-')[0];
-                allTasks.forEach(d => {
-                    if (d.data().status === status) {
-                        const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id); card.innerText = d.data().text;
-                        list.appendChild(card);
-                    }
-                });
+                allTasks.forEach(d => { if (d.data().status === status) { const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id); card.innerText = d.data().text; list.appendChild(card); } });
             });
             sortables.forEach(s => s.destroy());
             sortables = ['todo-list', 'doing-list', 'done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', onEnd: async (e) => {
                 showSync(true); await updateDoc(doc(db, 'tasks', e.item.getAttribute('data-id')), { status: e.to.parentElement.getAttribute('data-status') }); showSync(false);
             }}));
         }
-
         onSnapshot(collection(db, "tasks"), (s) => { allTasks = s.docs; renderBoard(); });
         onSnapshot(collection(db, "wiki"), (s) => {
             const side = document.getElementById('sidebar-wiki-list'), mob = document.getElementById('mobile-wiki-list');
@@ -290,7 +232,6 @@
                 side.appendChild(btn); mob.appendChild(btn.cloneNode(true));
             });
         });
-
         const showView = (v) => {
             [document.getElementById('kanban-view'), document.getElementById('wiki-list-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('freebies-view')].forEach(d => d.style.display = 'none');
             v.style.display = 'flex';
@@ -298,7 +239,6 @@
             const map = {'kanban-view':'switch-tasks', 'news-view':'switch-news', 'freebies-view':'switch-freebies', 'wiki-list-view':'switch-wiki', 'wiki-content-view':'switch-wiki'};
             if(map[v.id]) document.getElementById(map[v.id]).classList.add('active');
         };
-
         document.getElementById('switch-tasks').onclick = () => showView(document.getElementById('kanban-view'));
         document.getElementById('switch-news').onclick = () => showView(document.getElementById('news-view'));
         document.getElementById('switch-freebies').onclick = () => showView(document.getElementById('freebies-view'));
@@ -309,20 +249,16 @@
         document.getElementById('sync-ap-btn').onclick = fetchAP;
         document.getElementById('sync-deals-btn').onclick = fetchFreebies;
         document.getElementById('list-wiki-btn').onclick = () => showView(document.getElementById('wiki-list-view'));
-
         const autoSaveTask = async () => { if(curTaskId && isEditing) { showSync(true); await updateDoc(doc(db, 'tasks', curTaskId), { text: document.getElementById('modal-title-display').value, notes: document.getElementById('modal-notes').value }); showSync(false); }};
         document.getElementById('modal-notes').oninput = autoSaveTask;
         document.getElementById('modal-title-display').oninput = autoSaveTask;
-
         const autoSaveWiki = async () => { if(curWikiId && isEditing) { showSync(true); await updateDoc(doc(db, 'wiki', curWikiId), { title: document.getElementById('wiki-title-display').value, content: document.getElementById('wiki-notes').value }); showSync(false); }};
         document.getElementById('wiki-notes').oninput = autoSaveWiki;
         document.getElementById('wiki-title-display').oninput = autoSaveWiki;
-
         document.getElementById('task-mode-preview').onclick = (e) => { isEditing = false; document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value); document.getElementById('task-mode-edit').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
         document.getElementById('task-mode-edit').onclick = (e) => { isEditing = true; document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; document.getElementById('task-mode-preview').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
         document.getElementById('wiki-mode-preview').onclick = (e) => { isEditing = false; document.getElementById('wiki-notes').style.display='none'; document.getElementById('wiki-preview').style.display='block'; document.getElementById('wiki-preview').innerHTML = marked.parse(document.getElementById('wiki-notes').value); document.getElementById('wiki-mode-edit').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
         document.getElementById('wiki-mode-edit').onclick = (e) => { isEditing = true; document.getElementById('wiki-notes').style.display='block'; document.getElementById('wiki-preview').style.display='none'; document.getElementById('wiki-mode-preview').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
-        
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo' }); };
         document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
