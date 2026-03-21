@@ -27,7 +27,7 @@
         
         #main-content { flex-grow: 1; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
         #kanban-view { display: flex; flex-direction: column; flex-grow: 1; height: 100%; }
-        #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; transition: 0.3s; overflow-y: auto;}
+        #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; border: 1px solid #e0e0e0; transition: 0.3s; overflow-y: auto;}
 
         #filters { margin-bottom: 20px; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; }
         .filter-btn { padding: 5px 12px; border: 1px solid #d3d3d3; border-radius: 15px; background: white; cursor: pointer; font-size: 14px; transition: 0.2s; flex-shrink: 0; }
@@ -38,74 +38,48 @@
         .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 20px; min-height: 100px; }
         
-        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
-        .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
-        .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; border: 2px dashed #4338ca; } 
-        .sortable-fallback { opacity: 1 !important; transform: scale(1.05); cursor: grabbing; box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important; }
+        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; transition: box-shadow 0.2s; user-select: none; -webkit-user-select: none; position: relative; }
         
-        .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-        .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
-        
-        /* --- EDIT & DELETE STYLING --- */
-        .title-input { font-size: 24px; font-weight: bold; border: 1px solid transparent; background: transparent; width: 100%; outline: none; padding: 5px; font-family: inherit; color: inherit; border-radius: 4px; transition: 0.2s; box-sizing: border-box; margin: 0; }
-        .title-input:hover, .title-input:focus { border-color: #ccc; background: rgba(0,0,0,0.02); }
-        
-        .delete-btn { background: none; border: 1px solid #ff4d4f; color: #ff4d4f; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
-        .delete-btn:hover { background: #ff4d4f; color: white; }
+        /* THE DRAG HANDLE */
+        .handle { cursor: grab; color: #ccc; margin-right: 10px; font-size: 18px; display: inline-block; padding: 5px; }
+        .handle:active { cursor: grabbing; }
 
-        .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px; transition: 0.3s;}
-        .mode-btn.active { background: #ebebec; font-weight: 600; border-color: #bbb;}
-        .editor-textarea { flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa; margin-top: 15px; transition: 0.3s;}
-        .preview-area { display: none; flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow-y: auto; background-color: white; line-height: 1.6; margin-top: 15px; transition: 0.3s;}
-        .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.3s;}
+        .sortable-ghost { opacity: 0; } 
+        .sortable-fallback { opacity: 1 !important; transform: scale(1.05); cursor: grabbing; box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important; background-color: white !important; }
+        
+        .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; pointer-events: none; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
+        
+        .title-input { font-size: 24px; font-weight: bold; border: 1px solid transparent; background: transparent; width: 100%; outline: none; padding: 5px; font-family: inherit; color: inherit; border-radius: 4px; box-sizing: border-box; }
+        .title-input:focus { border-color: #ccc; background: rgba(0,0,0,0.02); }
+        
+        .delete-btn { background: none; border: 1px solid #ff4d4f; color: #ff4d4f; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; }
 
         #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.3s;}
-        .modal-header { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #eee; padding-bottom: 15px;}
+        .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; position: relative; }
         #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; position: absolute; right: 20px; top: 20px; }
         
-        .sidebar-action { margin-top: 10px; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; width: 100%; text-align: center; }
+        .sidebar-action { margin-top: 10px; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; width: 100%; }
 
-        /* --- DARK MODE OVERRIDES --- */
+        /* --- DARK MODE --- */
         body.dark-mode { background-color: #121212; color: #e0e0e0; }
-        body.dark-mode .login-box { background-color: #1e1e1e; border-color: #333; }
         body.dark-mode #sidebar { background-color: #1e1e1e; border-right-color: #333; }
-        body.dark-mode #global-search { background-color: #2d2d2d; border-color: #444; color: #e0e0e0; }
-        body.dark-mode .wiki-link { color: #e0e0e0; }
-        body.dark-mode .wiki-link:hover { background-color: #2d2d2d; }
-        body.dark-mode .active-nav { background-color: #333; color: #fff; }
-        body.dark-mode #wiki-view { background-color: #1e1e1e; border-color: #333; }
-        body.dark-mode .card { background-color: #1e1e1e; border-color: #333; color: #e0e0e0; }
-        body.dark-mode .filter-btn { background-color: #1e1e1e; color: #e0e0e0; border-color: #444; }
-        body.dark-mode .filter-btn.active-filter { background-color: #5c5c5c; color: white; border-color: #5c5c5c; }
-        body.dark-mode .mode-btn { background-color: #1e1e1e; color: #e0e0e0; border-color: #444; }
-        body.dark-mode .mode-btn.active { background-color: #333; border-color: #555; }
+        body.dark-mode .card { background-color: #1e1e1e; border-color: #333; }
+        body.dark-mode .modal-content { background-color: #1e1e1e; }
         body.dark-mode .editor-textarea, body.dark-mode .preview-area { background-color: #121212; color: #e0e0e0; border-color: #333; }
-        body.dark-mode .modal-content { background-color: #1e1e1e; border-color: #333; }
-        body.dark-mode .modal-header { border-bottom-color: #333; }
-        body.dark-mode .sidebar-action { border-color: #555; color: #ccc; }
         body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; }
-        body.dark-mode .title-input:hover, body.dark-mode .title-input:focus { border-color: #555; background: rgba(255,255,255,0.05); }
 
         /* --- MOBILE OPTIMIZATION --- */
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
-            #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 45vh; overflow-y: auto; box-sizing: border-box; }
-            #sidebar h3 { margin-top: 5px; margin-bottom: 5px; }
-            
-            #wiki-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-            .wiki-link { display: inline-block; margin-bottom: 0; flex-shrink: 0; padding: 6px 10px; }
-            
-            #add-wiki-btn { width: 100%; margin-top: 5px; margin-bottom: 10px; }
-            .sidebar-action { padding: 8px; }
-
+            #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 45vh; overflow-y: auto; }
+            #wiki-list { display: flex; flex-wrap: wrap; gap: 8px; }
+            .wiki-link { display: inline-block; padding: 6px 10px; }
             #main-content { padding: 15px; overflow-y: hidden; }
-            #kanban-board { overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-            .column { min-width: 85vw; width: 85vw; flex-shrink: 0; scroll-snap-align: center; margin-right: 15px; }
-            
-            .modal-content { width: 95%; height: 90vh; padding: 20px; box-sizing: border-box; }
-            .title-input { font-size: 20px; }
-            #wiki-view { padding: 20px; }
+            #kanban-board { overflow-x: auto; scroll-snap-type: x mandatory; }
+            .column { min-width: 85vw; width: 85vw; scroll-snap-align: center; margin-right: 15px; }
+            .modal-content { width: 95%; height: 90vh; }
         }
     </style>
 </head>
@@ -113,21 +87,18 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h1 style="margin-top: 0; font-size: 24px;">Jake's Kanban Wiki</h1>
-            <p style="color: #666; margin-bottom: 20px;">Please sign in to access your secure database.</p>
+            <h1>Jake's Kanban Wiki</h1>
             <button id="login-btn">Sign in with Google</button>
         </div>
     </div>
 
     <div id="app-container">
         <div id="sidebar">
-            <input type="text" id="global-search" placeholder="Search tasks & pages...">
+            <input type="text" id="global-search" placeholder="Search...">
             <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
-            
             <h3 style="font-size: 12px; color: #777;">WIKI PAGES</h3>
             <div id="wiki-list"></div>
-            <button id="add-wiki-btn" style="background: none; border: 1px dashed #bbb; border-radius: 4px; cursor: pointer; color: #555;">+ New Page</button>
-
+            <button id="add-wiki-btn">+ New Page</button>
             <div style="display: flex; gap: 10px; margin-top: auto;">
                 <button id="theme-toggle" class="sidebar-action">🌙 Dark</button>
                 <button id="logout-btn" class="sidebar-action">🚪 Log Out</button>
@@ -136,7 +107,6 @@
 
         <div id="main-content">
             <div id="kanban-view">
-                <h2 style="margin-top: 0;">Kanban Board</h2>
                 <div id="filters">
                     <button class="filter-btn active-filter">All</button>
                     <button class="filter-btn">Theology</button>
@@ -145,11 +115,11 @@
                 </div>
                 <div id="kanban-board">
                     <div class="column" data-status="todo">
-                        <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:none; border:1px solid #888; border-radius:4px; padding:4px 10px; color: inherit;">+ New</button></div>
+                        <div class="column-header">To Do <button id="add-btn">+ New</button></div>
                         <div class="card-list" id="todo-list"></div>
                     </div>
                     <div class="column" data-status="doing">
-                        <div class="column-header">In Progress</div>
+                        <div class="column-header">Doing</div>
                         <div class="card-list" id="doing-list"></div>
                     </div>
                     <div class="column" data-status="done">
@@ -160,19 +130,11 @@
             </div>
 
             <div id="wiki-view">
-                <div style="display: flex; flex-direction: column; border-bottom: 1px solid #eee; padding-bottom: 15px; gap: 10px;">
-                    <input type="text" id="wiki-title-input" class="title-input" placeholder="Page Title">
-                    <div>
-                        <button id="wiki-btn-edit" class="mode-btn active">Edit</button>
-                        <button id="wiki-btn-preview" class="mode-btn">Preview</button>
-                    </div>
-                </div>
-                <textarea id="wiki-page-notes" class="editor-textarea" placeholder="Start writing your wiki page here using Markdown..."></textarea>
-                <div id="wiki-page-preview" class="preview-area"></div>
-                
+                <input type="text" id="wiki-title-input" class="title-input">
+                <textarea id="wiki-page-notes" class="editor-textarea" style="height: 50vh; width: 100%; margin-top: 10px;"></textarea>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                    <button id="delete-wiki-btn" class="delete-btn">🗑️ Delete Page</button>
-                    <button id="wiki-save-btn" class="save-btn">Save Page</button>
+                    <button id="delete-wiki-btn" class="delete-btn">🗑️ Delete</button>
+                    <button id="wiki-save-btn" class="save-btn">Save</button>
                 </div>
             </div>
         </div>
@@ -181,25 +143,16 @@
     <div id="editor-modal">
         <div class="modal-content">
             <button id="close-modal">&times;</button>
-            <div class="modal-header">
-                <input type="text" id="modal-title-input" class="title-input" placeholder="Task Title">
-                <div style="margin-top: 5px;">
-                    <button id="modal-btn-edit" class="mode-btn active">Edit</button>
-                    <button id="modal-btn-preview" class="mode-btn">Preview</button>
-                </div>
-            </div>
-            <textarea id="modal-notes" class="editor-textarea" placeholder="Write your task notes here..."></textarea>
-            <div id="modal-preview" class="preview-area"></div>
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-                <button id="delete-task-btn" class="delete-btn">🗑️ Delete Task</button>
-                <button id="save-notes" class="save-btn">Save Notes</button>
+            <input type="text" id="modal-title-input" class="title-input">
+            <textarea id="modal-notes" class="editor-textarea" style="height: 40vh; width: 100%; margin-top: 10px;"></textarea>
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button id="delete-task-btn" class="delete-btn">🗑️ Delete</button>
+                <button id="save-notes" class="save-btn">Save</button>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // Added deleteDoc to the import list
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -217,259 +170,144 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-        
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        // --- AUTHENTICATION ---
-        const loginScreen = document.getElementById('login-screen');
-        const appContainer = document.getElementById('app-container');
-
-        document.getElementById('login-btn').addEventListener('click', () => {
-            signInWithPopup(auth, provider).catch(error => alert("Login failed: " + error.message));
-        });
-
-        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
-        let unsubscribeTasks = null;
-        let unsubscribeWiki = null;
-
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                loginScreen.style.display = 'none'; appContainer.style.display = 'flex';
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
                 startDatabaseListeners();
                 initSortable(); 
             } else {
-                loginScreen.style.display = 'flex'; appContainer.style.display = 'none';
-                if (unsubscribeTasks) unsubscribeTasks();
-                if (unsubscribeWiki) unsubscribeWiki();
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app-container').style.display = 'none';
             }
         });
 
-        // --- SORTABLEJS DRAG FIX ---
+        document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider));
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
         function initSortable() {
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 new Sortable(document.getElementById(id), {
-                    group: 'kanban', 
+                    group: 'kanban',
+                    handle: '.handle', // FORCE dragging only by the handle on mobile
                     animation: 150,
-                    delay: 200, 
-                    delayOnTouchOnly: true, 
-                    touchStartThreshold: 15, 
-                    forceFallback: true, 
-                    fallbackClass: "sortable-fallback", 
-                    fallbackOnBody: true, 
-                    swapThreshold: 0.65,
+                    forceFallback: true,
+                    fallbackOnBody: true,
+                    onStart: function() {
+                        // LOCK BOARD SCROLLING while dragging
+                        document.getElementById('kanban-board').style.overflowX = 'hidden';
+                    },
                     onEnd: function (evt) {
+                        // UNLOCK BOARD SCROLLING
+                        document.getElementById('kanban-board').style.overflowX = 'auto';
                         const newStatus = evt.to.parentElement.getAttribute('data-status');
                         const taskId = evt.item.getAttribute('data-id');
-                        if (taskId && newStatus) {
-                            updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
-                        }
+                        if (taskId && newStatus) updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
                     }
                 });
             });
         }
 
-        // --- THEME ---
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-mode'); themeToggleBtn.innerText = '☀️ Light';
-        }
-        themeToggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            if (document.body.classList.contains('dark-mode')) {
-                localStorage.setItem('theme', 'dark'); themeToggleBtn.innerText = '☀️ Light';
-            } else {
-                localStorage.setItem('theme', 'light'); themeToggleBtn.innerText = '🌙 Dark';
-            }
-        });
-
-        // --- GLOBAL VARIABLES & VIEWS ---
-        let currentEditingId = null;
-        let currentWikiId = null;
-        let currentFilter = 'All'; 
-        let currentSearchTerm = ''; 
-
-        const kanbanView = document.getElementById('kanban-view');
-        const wikiView = document.getElementById('wiki-view');
-        const navKanban = document.getElementById('nav-kanban');
-        const searchInput = document.getElementById('global-search');
-
-        navKanban.addEventListener('click', () => {
-            kanbanView.style.display = 'flex'; wikiView.style.display = 'none';
-            navKanban.classList.add('active-nav');
-            document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
-        });
-
-        function applyFilters() {
-            const filterValue = currentFilter.toLowerCase();
-            const searchValue = currentSearchTerm.toLowerCase();
-
-            document.querySelectorAll('.card').forEach(card => {
-                const tagElement = card.querySelector('.tag');
-                const tagText = tagElement ? tagElement.innerText.toLowerCase() : '';
-                const matchesTag = (filterValue === 'all' || tagText === filterValue);
-                card.style.display = (matchesTag && card.innerText.toLowerCase().includes(searchValue)) ? 'block' : 'none';
-            });
-
-            document.querySelectorAll('.dynamic-wiki-link').forEach(link => {
-                link.style.display = link.innerText.toLowerCase().includes(searchValue) ? 'inline-block' : 'none';
-            });
-        }
-
-        searchInput.addEventListener('input', (e) => { currentSearchTerm = e.target.value; applyFilters(); });
-
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        filterButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                filterButtons.forEach(b => b.classList.remove('active-filter'));
-                e.target.classList.add('active-filter');
-                currentFilter = e.target.innerText; applyFilters();
-            });
-        });
-
-        // --- WIKI DOM ---
-        const wikiTitleInput = document.getElementById('wiki-title-input');
-        const wikiNotes = document.getElementById('wiki-page-notes');
-        const wikiPreview = document.getElementById('wiki-page-preview');
-        const wikiBtnEdit = document.getElementById('wiki-btn-edit');
-        const wikiBtnPreview = document.getElementById('wiki-btn-preview');
-
-        wikiBtnEdit.addEventListener('click', () => {
-            wikiBtnEdit.classList.add('active'); wikiBtnPreview.classList.remove('active');
-            wikiNotes.style.display = 'block'; wikiPreview.style.display = 'none';
-        });
-        wikiBtnPreview.addEventListener('click', () => {
-            wikiBtnPreview.classList.add('active'); wikiBtnEdit.classList.remove('active');
-            wikiNotes.style.display = 'none'; wikiPreview.style.display = 'block';
-            wikiPreview.innerHTML = marked.parse(wikiNotes.value); 
-        });
-
-        // --- KANBAN MODAL DOM ---
-        const modal = document.getElementById('editor-modal');
-        const modalTitleInput = document.getElementById('modal-title-input');
-        const modalNotes = document.getElementById('modal-notes');
-        const modalPreview = document.getElementById('modal-preview');
-        const modalBtnEdit = document.getElementById('modal-btn-edit');
-        const modalBtnPreview = document.getElementById('modal-btn-preview');
-
-        modalBtnEdit.addEventListener('click', () => {
-            modalBtnEdit.classList.add('active'); modalBtnPreview.classList.remove('active');
-            modalNotes.style.display = 'block'; modalPreview.style.display = 'none';
-        });
-        modalBtnPreview.addEventListener('click', () => {
-            modalBtnPreview.classList.add('active'); modalBtnEdit.classList.remove('active');
-            modalNotes.style.display = 'none'; modalPreview.style.display = 'block';
-            modalPreview.innerHTML = marked.parse(modalNotes.value); 
-        });
-
-        // --- LISTENERS ---
         function startDatabaseListeners() {
-            unsubscribeWiki = onSnapshot(wikiCol, (snapshot) => {
-                const wikiList = document.getElementById('wiki-list');
-                wikiList.innerHTML = ''; 
-                snapshot.forEach((docSnap) => {
-                    const page = docSnap.data();
-                    const link = document.createElement('div');
-                    link.className = 'wiki-link dynamic-wiki-link'; link.innerText = `📄 ${page.title}`;
-                    link.addEventListener('click', () => {
-                        kanbanView.style.display = 'none'; wikiView.style.display = 'flex';
-                        navKanban.classList.remove('active-nav');
-                        document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
-                        link.classList.add('active-nav');
-
-                        currentWikiId = docSnap.id;
-                        wikiTitleInput.value = page.title; 
-                        wikiNotes.value = page.content || '';
-                        if(page.content) { wikiBtnPreview.click(); } else { wikiBtnEdit.click(); }
-                    });
-                    wikiList.appendChild(link);
-                });
-                applyFilters(); 
-            });
-
-            unsubscribeTasks = onSnapshot(tasksCol, (snapshot) => {
-                document.getElementById('todo-list').innerHTML = ''; document.getElementById('doing-list').innerHTML = ''; document.getElementById('done-list').innerHTML = '';
+            onSnapshot(tasksCol, (snapshot) => {
+                document.getElementById('todo-list').innerHTML = '';
+                document.getElementById('doing-list').innerHTML = '';
+                document.getElementById('done-list').innerHTML = '';
                 snapshot.forEach((docSnap) => {
                     const task = docSnap.data();
-                    const card = document.createElement('div'); 
-                    card.className = 'card'; 
+                    const card = document.createElement('div');
+                    card.className = 'card';
                     card.setAttribute('data-id', docSnap.id);
-                    // Stripped out all native HTML5 dragging logic here so SortableJS can work flawlessly
+                    card.innerHTML = `<span class="handle">⠿</span><span class="card-text">${task.text}</span><div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
                     
-                    let tagHtml = `<div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
-                    card.innerHTML = `${tagHtml}${task.text}`;
-
-                    card.addEventListener('click', () => {
-                        currentEditingId = docSnap.id;
-                        modalTitleInput.value = task.text; 
-                        modalNotes.value = task.notes || ''; 
-                        modalBtnEdit.click(); modal.style.display = 'flex';
+                    card.addEventListener('click', (e) => {
+                        if(e.target.className === 'handle') return; // Don't open modal if grabbing handle
+                        openModal(docSnap.id, task);
                     });
 
-                    if (task.status === 'todo') document.getElementById('todo-list').appendChild(card);
-                    if (task.status === 'doing') document.getElementById('doing-list').appendChild(card);
-                    if (task.status === 'done') document.getElementById('done-list').appendChild(card);
+                    document.getElementById(`${task.status}-list`).appendChild(card);
                 });
-                applyFilters(); 
+            });
+
+            onSnapshot(wikiCol, (snapshot) => {
+                const list = document.getElementById('wiki-list');
+                list.innerHTML = '';
+                snapshot.forEach(docSnap => {
+                    const page = docSnap.data();
+                    const link = document.createElement('div');
+                    link.className = 'wiki-link';
+                    link.innerText = `📄 ${page.title}`;
+                    link.onclick = () => openWiki(docSnap.id, page);
+                    list.appendChild(link);
+                });
             });
         }
 
-        // --- ACTIONS: CREATE, UPDATE, DELETE ---
-        
-        // Wiki Actions
-        document.getElementById('add-wiki-btn').addEventListener('click', async () => {
-            const title = prompt("What is the title of the new Wiki page?");
-            if (title) { await addDoc(wikiCol, { title: title, content: '' }); }
-        });
+        // --- Shared Logic ---
+        let currentWikiId = null;
+        let currentTaskId = null;
 
-        document.getElementById('wiki-save-btn').addEventListener('click', async () => {
-            if (currentWikiId) {
-                await updateDoc(doc(db, 'wiki', currentWikiId), { 
-                    content: wikiNotes.value,
-                    title: wikiTitleInput.value // Saves the renamed title
-                });
-                const btn = document.getElementById('wiki-save-btn');
-                btn.innerText = "Saved!"; btn.style.backgroundColor = "#15803d";
-                setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = ""; }, 2000);
+        function openModal(id, task) {
+            currentTaskId = id;
+            document.getElementById('modal-title-input').value = task.text;
+            document.getElementById('modal-notes').value = task.notes || '';
+            document.getElementById('editor-modal').style.display = 'flex';
+        }
+
+        function openWiki(id, page) {
+            currentWikiId = id;
+            document.getElementById('kanban-view').style.display = 'none';
+            document.getElementById('wiki-view').style.display = 'flex';
+            document.getElementById('wiki-title-input').value = page.title;
+            document.getElementById('wiki-page-notes').value = page.content || '';
+        }
+
+        document.getElementById('nav-kanban').onclick = () => {
+            document.getElementById('kanban-view').style.display = 'flex';
+            document.getElementById('wiki-view').style.display = 'none';
+        };
+
+        document.getElementById('save-notes').onclick = () => {
+            updateDoc(doc(db, 'tasks', currentTaskId), { 
+                text: document.getElementById('modal-title-input').value,
+                notes: document.getElementById('modal-notes').value 
+            });
+            document.getElementById('editor-modal').style.display = 'none';
+        };
+
+        document.getElementById('wiki-save-btn').onclick = () => {
+            updateDoc(doc(db, 'wiki', currentWikiId), { 
+                title: document.getElementById('wiki-title-input').value,
+                content: document.getElementById('wiki-page-notes').value 
+            });
+        };
+
+        document.getElementById('add-btn').onclick = () => {
+            const t = prompt("Task Name?");
+            if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: 'General', notes: '' });
+        };
+
+        document.getElementById('add-wiki-btn').onclick = () => {
+            const t = prompt("Page Title?");
+            if(t) addDoc(wikiCol, { title: t, content: '' });
+        };
+
+        document.getElementById('delete-task-btn').onclick = () => {
+            if(confirm("Delete?")) {
+                deleteDoc(doc(db, 'tasks', currentTaskId));
+                document.getElementById('editor-modal').style.display = 'none';
             }
-        });
+        };
 
-        document.getElementById('delete-wiki-btn').addEventListener('click', async () => {
-            if (currentWikiId && confirm("Are you sure you want to permanently delete this page?")) {
-                await deleteDoc(doc(db, 'wiki', currentWikiId));
-                navKanban.click(); // Send user back to board after deleting
-            }
-        });
+        document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
 
-        // Kanban Actions
-        document.getElementById('add-btn').addEventListener('click', async () => {
-            const text = prompt("What is the new task?");
-            if (text) {
-                const tag = prompt("What category? (e.g., Theology, Mortgage, Gaming)", "General");
-                await addDoc(tasksCol, { text: text, status: 'todo', tag: tag || 'General', notes: '' });
-            }
-        });
-
-        document.getElementById('close-modal').addEventListener('click', () => { modal.style.display = 'none'; });
-        
-        document.getElementById('save-notes').addEventListener('click', async () => {
-            if (currentEditingId) {
-                await updateDoc(doc(db, 'tasks', currentEditingId), { 
-                    notes: modalNotes.value,
-                    text: modalTitleInput.value // Saves the renamed title
-                });
-                modal.style.display = 'none'; 
-            }
-        });
-
-        document.getElementById('delete-task-btn').addEventListener('click', async () => {
-            if (currentEditingId && confirm("Are you sure you want to permanently delete this task?")) {
-                await deleteDoc(doc(db, 'tasks', currentEditingId));
-                modal.style.display = 'none';
-            }
-        });
-
+        // Theme Toggle
+        document.getElementById('theme-toggle').onclick = () => {
+            document.body.classList.toggle('dark-mode');
+        };
     </script>
 </body>
 </html>
