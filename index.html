@@ -50,8 +50,8 @@
         .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; max-height: 100%; }
         .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         .card-list { flex-grow: 1; padding: 5px; min-height: 150px; overflow-y: auto; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
-        
+        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
         /* --- WIKI HEADER --- */
         .wiki-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
         .wiki-header-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -79,7 +79,6 @@
             #sidebar, #mobile-switcher, .wiki-header, .sync-status, .btn, .search-bar, #tag-cloud { display: none !important; }
             #main-content, #wiki-content-view { display: block !important; padding: 0 !important; width: 100% !important; }
             body { background: white !important; color: black !important; overflow: visible !important; }
-            .preview-area { border: none !important; padding: 0 !important; overflow: visible !important; }
         }
 
         @media (max-width: 768px) {
@@ -266,10 +265,17 @@
                 await addDoc(wikiCol, {
                     title: "📖 How to Use This Site",
                     tag: "Guide",
-                    content: "# Getting Started\nWelcome to your Star Trek inspired workspace.\n\n## Kanban Board\n- **To Do**: New tasks.\n- **Doing**: Active projects.\n- **Done**: Completed work.\n- Use the **🧹 Sweep** button to archive the Done column.\n\n## Tagging System\n- Assign tags (like `Mortgage` or `Sunday School`) to cards and pages.\n- Tap the tags at the top to filter everything at once.\n\n## Wiki Power User Tips\n- **Auto-Save**: Just type; it saves automatically.\n- **TOC**: Use `# Section` or `## Subsection` to generate a Jump Menu.\n- **Images**: Click 'Image' button to insert reference charts via URL.\n- **PDF Export**: Click 'PDF' to print a clean copy of your notes.",
+                    content: "# Getting Started\nWelcome to your Star Trek inspired workspace.\n\n## Markdown Tips\n- # Header\n- ## Subheader\n- **Bold**\n- *Italics*\n- ![Image Alt](URL)\n\n## Site Tips\n- **Auto-Save**: Saves as you type.\n- **PDF**: Click PDF to print.\n- **Search**: Scans library content.\n- **Tags**: Filter board and library simultaneously.",
                     lastEdited: serverTimestamp()
                 });
             }
+        }
+
+        function renderMarkdown(prefix, notesEl, previewEl, tocId) {
+            const rend = new marked.Renderer();
+            rend.heading = (t, l) => `<h${l} id="${t.toLowerCase().replace(/[^\w]+/g, '-')}">${t}</h${l}>`;
+            previewEl.innerHTML = marked.parse(notesEl.value || "", { renderer: rend });
+            if (tocId) generateTOC(notesEl.value || "", tocId, prefix + '-preview');
         }
 
         const applyTheme = (t) => {
@@ -376,13 +382,6 @@
             });
         }
 
-        function renderMarkdown(prefix, notesEl, previewEl, tocId) {
-            const rend = new marked.Renderer();
-            rend.heading = (t, l) => `<h${l} id="${t.toLowerCase().replace(/[^\w]+/g, '-')}">${t}</h${l}>`;
-            previewEl.innerHTML = marked.parse(notesEl.value || "", { renderer: rend });
-            if (tocId) generateTOC(notesEl.value || "", tocId, prefix + '-preview');
-        }
-
         const setupToggle = (prefix, notesEl, previewEl, tocId) => {
             const btnP = document.getElementById(`${prefix}-mode-preview`), btnE = document.getElementById(`${prefix}-mode-edit`);
             btnP.onclick = () => { 
@@ -398,16 +397,21 @@
         
         function openWiki(p) { 
             showView(wikiContentView); 
-            document.getElementById('wiki-preview').innerHTML = ''; // Hard reset
+            curWikiId = curWikiId; // ID already set by click listener
             document.getElementById('wiki-title-display').value = p.title; 
             document.getElementById('wiki-tag-input').value = p.tag || ''; 
             document.getElementById('wiki-notes').value = p.content || ''; 
             setStatus('wiki-sync-indicator', 'Synced'); 
-            document.getElementById('wiki-mode-preview').click(); 
+            // FORCE RENDER PREVIEW
+            document.getElementById('wiki-mode-preview').classList.add('active');
+            document.getElementById('wiki-mode-edit').classList.remove('active');
+            document.getElementById('wiki-notes').style.display = 'none';
+            document.getElementById('wiki-preview').style.display = 'block';
+            renderMarkdown('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'), 'wiki-toc');
         }
 
         const addImage = (taId) => {
-            const url = prompt("Paste the image URL here:");
+            const url = prompt("Paste image URL:");
             if (url) {
                 const ta = document.getElementById(taId);
                 ta.value += `\n\n![Image](${url})`;
