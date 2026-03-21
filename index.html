@@ -2,27 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jake's Kanban Wiki</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
 
     <style>
         /* --- BASE STYLING --- */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; height: 100vh; background-color: #f7f7f5; color: #37352f; transition: background-color 0.3s, color 0.3s; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; height: 100vh; background-color: #f7f7f5; color: #37352f; transition: background-color 0.3s, color 0.3s; overflow: hidden; }
         
-        /* --- LOGIN SCREEN --- */
         #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; width: 100%; text-align: center; }
-        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; max-width: 400px; width: 90%; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; max-width: 400px; width: 80%; }
         #login-btn { background: #4285F4; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: 0.2s; width: 100%; }
-        #login-btn:hover { background: #3367D6; }
 
-        /* --- MAIN APP WRAPPER --- */
         #app-container { display: none; height: 100vh; width: 100%; flex-direction: row; }
 
-        #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; transition: 0.3s; }
+        #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; transition: 0.3s; z-index: 10; }
         
-        #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none; transition: 0.3s; }
+        #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 16px; outline: none; transition: 0.3s; }
         
         .wiki-link { display: block; padding: 8px; margin-bottom: 5px; border-radius: 4px; text-decoration: none; color: #37352f; cursor: pointer; transition: 0.2s;}
         .wiki-link:hover { background-color: #dfdfdf; }
@@ -30,46 +28,38 @@
         
         #main-content { flex-grow: 1; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
         
-        #kanban-view { display: flex; flex-direction: column; flex-grow: 1; }
-        #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; transition: 0.3s; }
+        #kanban-view { display: flex; flex-direction: column; flex-grow: 1; height: 100%; }
+        #wiki-view { display: none; flex-direction: column; flex-grow: 1; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; transition: 0.3s; overflow-y: auto;}
 
-        #filters { margin-bottom: 20px; display: flex; gap: 10px; }
-        .filter-btn { padding: 5px 12px; border: 1px solid #d3d3d3; border-radius: 15px; background: white; cursor: pointer; font-size: 14px; transition: 0.2s; }
-        .filter-btn:hover { background: #efefef; }
+        #filters { margin-bottom: 20px; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; }
+        .filter-btn { padding: 5px 12px; border: 1px solid #d3d3d3; border-radius: 15px; background: white; cursor: pointer; font-size: 14px; transition: 0.2s; flex-shrink: 0; }
         .filter-btn.active-filter { background: #37352f; color: white; border-color: #37352f; }
         
-        #kanban-board { display: flex; gap: 20px; flex-grow: 1; }
-        .column { background-color: transparent; width: 33%; display: flex; flex-direction: column; }
-        .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .card-list { display: flex; flex-direction: column; gap: 10px; min-height: 200px; flex-grow: 1; }
+        #kanban-board { display: flex; gap: 20px; flex-grow: 1; overflow-y: hidden; }
+        .column { background-color: transparent; width: 33%; display: flex; flex-direction: column; height: 100%; }
+        .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 20px; min-height: 100px; }
         
         .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: 0.3s; }
         .card:active { cursor: grabbing; }
-        .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
         .dragging { opacity: 0.5; border: 2px dashed #4338ca; }
         
-        .tag-container { display: flex; gap: 5px; margin-bottom: 8px; }
+        .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
         
         .mode-btn { background: white; border: 1px solid #d3d3d3; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 13px; transition: 0.3s;}
         .mode-btn.active { background: #ebebec; font-weight: 600; border-color: #bbb;}
         .editor-textarea { flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 16px; resize: none; outline: none; background-color: #fafafa; margin-top: 15px; transition: 0.3s;}
-        .editor-textarea:focus { background-color: white; border-color: #ccc; }
         .preview-area { display: none; flex-grow: 1; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow-y: auto; background-color: white; line-height: 1.6; margin-top: 15px; transition: 0.3s;}
-        .preview-area h1, .preview-area h2, .preview-area h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .preview-area ul { padding-left: 20px; }
         .save-btn { background: #37352f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 20px; align-self: flex-end; transition: 0.3s;}
-        .save-btn:hover { background: #2f2d28; }
 
         #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; width: 650px; max-width: 90%; height: 75vh; border-radius: 8px; display: flex; flex-direction: column; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.3s;}
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;}
-        #modal-title { margin: 0; font-size: 24px; }
+        #modal-title { margin: 0; font-size: 20px; word-break: break-word; padding-right: 10px; }
         #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; margin-left: 10px;}
         
-        /* Bottom Sidebar Actions */
         .sidebar-action { margin-top: 10px; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; width: 100%; text-align: center; }
-        .sidebar-action:hover { background: #dfdfdf; }
 
         /* --- DARK MODE OVERRIDES --- */
         body.dark-mode { background-color: #121212; color: #e0e0e0; }
@@ -82,17 +72,41 @@
         body.dark-mode #wiki-view { background-color: #1e1e1e; border-color: #333; }
         body.dark-mode .card { background-color: #1e1e1e; border-color: #333; color: #e0e0e0; }
         body.dark-mode .filter-btn { background-color: #1e1e1e; color: #e0e0e0; border-color: #444; }
-        body.dark-mode .filter-btn:hover { background-color: #333; }
         body.dark-mode .filter-btn.active-filter { background-color: #5c5c5c; color: white; border-color: #5c5c5c; }
         body.dark-mode .mode-btn { background-color: #1e1e1e; color: #e0e0e0; border-color: #444; }
         body.dark-mode .mode-btn.active { background-color: #333; border-color: #555; }
         body.dark-mode .editor-textarea, body.dark-mode .preview-area { background-color: #121212; color: #e0e0e0; border-color: #333; }
-        body.dark-mode .editor-textarea:focus { background-color: #1a1a1a; border-color: #555; }
         body.dark-mode .modal-content { background-color: #1e1e1e; border-color: #333; }
         body.dark-mode .modal-header { border-bottom-color: #333; }
         body.dark-mode .sidebar-action { border-color: #555; color: #ccc; }
-        body.dark-mode .sidebar-action:hover { background-color: #333; }
         body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; }
+
+        /* --- MOBILE OPTIMIZATION (Fires on screens smaller than 768px) --- */
+        @media (max-width: 768px) {
+            #app-container { flex-direction: column; }
+            
+            /* Compact Sidebar for Top of Screen */
+            #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 35vh; overflow-y: auto; box-sizing: border-box; }
+            #sidebar h3 { margin-top: 5px; margin-bottom: 5px; }
+            #wiki-list { display: flex; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; margin-bottom: 10px; }
+            .wiki-link { display: inline-block; margin-bottom: 0; }
+            #add-wiki-btn { width: 100%; margin-top: 5px; margin-bottom: 10px; }
+            .sidebar-action { padding: 8px; }
+
+            /* Kanban Swipe Layout */
+            #main-content { padding: 15px; overflow-y: hidden; }
+            #kanban-board { overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+            .column { min-width: 85vw; width: 85vw; flex-shrink: 0; scroll-snap-align: center; margin-right: 15px; }
+            
+            /* Modal Fixes */
+            .modal-content { width: 95%; height: 90vh; padding: 20px; box-sizing: border-box; }
+            .modal-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            #modal-title { font-size: 18px; }
+            #close-modal { position: absolute; top: 15px; right: 15px; }
+            
+            /* Full Page Wiki Fixes */
+            #wiki-view { padding: 20px; }
+        }
 
     </style>
 </head>
@@ -112,18 +126,19 @@
             <input type="text" id="global-search" placeholder="Search tasks & pages...">
             <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
             
-            <h3 style="margin-top: 10px; margin-bottom: 10px; font-size: 14px; color: #777;">WIKI PAGES</h3>
+            <h3 style="font-size: 12px; color: #777;">WIKI PAGES</h3>
             <div id="wiki-list"></div>
-            
-            <button id="add-wiki-btn" style="margin-top: 15px; margin-bottom: auto; background: none; border: 1px dashed #bbb; padding: 8px; border-radius: 4px; cursor: pointer; color: #555;">+ New Page</button>
+            <button id="add-wiki-btn" style="background: none; border: 1px dashed #bbb; border-radius: 4px; cursor: pointer; color: #555;">+ New Page</button>
 
-            <button id="theme-toggle" class="sidebar-action">🌙 Dark Mode</button>
-            <button id="logout-btn" class="sidebar-action" style="margin-top: 5px;">🚪 Log Out</button>
+            <div style="display: flex; gap: 10px; margin-top: auto;">
+                <button id="theme-toggle" class="sidebar-action">🌙 Dark</button>
+                <button id="logout-btn" class="sidebar-action">🚪 Log Out</button>
+            </div>
         </div>
 
         <div id="main-content">
             <div id="kanban-view">
-                <h2>Kanban Board</h2>
+                <h2 style="margin-top: 0;">Kanban Board</h2>
                 <div id="filters">
                     <button class="filter-btn active-filter">All</button>
                     <button class="filter-btn">Theology</button>
@@ -132,7 +147,7 @@
                 </div>
                 <div id="kanban-board">
                     <div class="column" data-status="todo">
-                        <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:none; border:1px solid #888; border-radius:4px; padding:2px 8px; color: inherit;">+ New</button></div>
+                        <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:none; border:1px solid #888; border-radius:4px; padding:4px 10px; color: inherit;">+ New</button></div>
                         <div class="card-list" id="todo-list"></div>
                     </div>
                     <div class="column" data-status="doing">
@@ -147,8 +162,8 @@
             </div>
 
             <div id="wiki-view">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                    <h1 id="wiki-page-title" style="margin: 0;">Page Title</h1>
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; gap: 10px;">
+                    <h1 id="wiki-page-title" style="margin: 0; font-size: 20px;">Page Title</h1>
                     <div>
                         <button id="wiki-btn-edit" class="mode-btn active">Edit</button>
                         <button id="wiki-btn-preview" class="mode-btn">Preview</button>
@@ -163,12 +178,12 @@
 
     <div id="editor-modal">
         <div class="modal-content">
+            <button id="close-modal">&times;</button>
             <div class="modal-header">
                 <h2 id="modal-title">Task Title</h2>
-                <div>
+                <div style="margin-top: 10px;">
                     <button id="modal-btn-edit" class="mode-btn active">Edit</button>
                     <button id="modal-btn-preview" class="mode-btn">Preview</button>
-                    <button id="close-modal">&times;</button>
                 </div>
             </div>
             <textarea id="modal-notes" class="editor-textarea" placeholder="Write your task notes here..."></textarea>
@@ -178,7 +193,6 @@
     </div>
 
     <script type="module">
-        // Import Database tools AND Authentication tools
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -200,68 +214,51 @@
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        // --- AUTHENTICATION LOGIC ---
+        // --- AUTHENTICATION ---
         const loginScreen = document.getElementById('login-screen');
         const appContainer = document.getElementById('app-container');
 
-        // Login Button Click
         document.getElementById('login-btn').addEventListener('click', () => {
-            signInWithPopup(auth, provider).catch(error => {
-                alert("Login failed: " + error.message);
-            });
+            signInWithPopup(auth, provider).catch(error => alert("Login failed: " + error.message));
         });
 
-        // Logout Button Click
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            signOut(auth);
-        });
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-        // Variables to stop listening to the database when we log out
         let unsubscribeTasks = null;
         let unsubscribeWiki = null;
 
-        // This runs automatically whenever your login status changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // USER IS LOGGED IN! Hide login, show app, start database.
-                loginScreen.style.display = 'none';
-                appContainer.style.display = 'flex';
+                loginScreen.style.display = 'none'; appContainer.style.display = 'flex';
                 startDatabaseListeners();
             } else {
-                // USER IS LOGGED OUT! Show login, hide app, stop database.
-                loginScreen.style.display = 'flex';
-                appContainer.style.display = 'none';
+                loginScreen.style.display = 'flex'; appContainer.style.display = 'none';
                 if (unsubscribeTasks) unsubscribeTasks();
                 if (unsubscribeWiki) unsubscribeWiki();
             }
         });
 
-
-        // --- THEME LOGIC ---
+        // --- THEME ---
         const themeToggleBtn = document.getElementById('theme-toggle');
         if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-mode');
-            themeToggleBtn.innerText = '☀️ Light Mode';
+            document.body.classList.add('dark-mode'); themeToggleBtn.innerText = '☀️ Light';
         }
         themeToggleBtn.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
             if (document.body.classList.contains('dark-mode')) {
-                localStorage.setItem('theme', 'dark');
-                themeToggleBtn.innerText = '☀️ Light Mode';
+                localStorage.setItem('theme', 'dark'); themeToggleBtn.innerText = '☀️ Light';
             } else {
-                localStorage.setItem('theme', 'light');
-                themeToggleBtn.innerText = '🌙 Dark Mode';
+                localStorage.setItem('theme', 'light'); themeToggleBtn.innerText = '🌙 Dark';
             }
         });
 
-        // --- GLOBAL VARIABLES ---
+        // --- GLOBAL VARIABLES & VIEWS ---
         let draggedCardId = null;
         let currentEditingId = null;
         let currentWikiId = null;
         let currentFilter = 'All'; 
         let currentSearchTerm = ''; 
 
-        // --- VIEW SWITCHING ---
         const kanbanView = document.getElementById('kanban-view');
         const wikiView = document.getElementById('wiki-view');
         const navKanban = document.getElementById('nav-kanban');
@@ -273,7 +270,6 @@
             document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
         });
 
-        // --- FILTERING ---
         function applyFilters() {
             const filterValue = currentFilter.toLowerCase();
             const searchValue = currentSearchTerm.toLowerCase();
@@ -281,13 +277,12 @@
             document.querySelectorAll('.card').forEach(card => {
                 const tagElement = card.querySelector('.tag');
                 const tagText = tagElement ? tagElement.innerText.toLowerCase() : '';
-                const cardText = card.innerText.toLowerCase();
                 const matchesTag = (filterValue === 'all' || tagText === filterValue);
-                card.style.display = (matchesTag && cardText.includes(searchValue)) ? 'block' : 'none';
+                card.style.display = (matchesTag && card.innerText.toLowerCase().includes(searchValue)) ? 'block' : 'none';
             });
 
             document.querySelectorAll('.dynamic-wiki-link').forEach(link => {
-                link.style.display = link.innerText.toLowerCase().includes(searchValue) ? 'block' : 'none';
+                link.style.display = link.innerText.toLowerCase().includes(searchValue) ? 'inline-block' : 'none';
             });
         }
 
@@ -298,12 +293,11 @@
             btn.addEventListener('click', (e) => {
                 filterButtons.forEach(b => b.classList.remove('active-filter'));
                 e.target.classList.add('active-filter');
-                currentFilter = e.target.innerText;
-                applyFilters();
+                currentFilter = e.target.innerText; applyFilters();
             });
         });
 
-        // --- WIKI & MODAL DOM LOGIC ---
+        // --- WIKI & MODAL DOM ---
         const wikiTitle = document.getElementById('wiki-page-title');
         const wikiNotes = document.getElementById('wiki-page-notes');
         const wikiPreview = document.getElementById('wiki-page-preview');
@@ -336,11 +330,8 @@
             modalPreview.innerHTML = marked.parse(modalNotes.value); 
         });
 
-
-        // --- DATABASE LISTENERS (Only runs when logged in) ---
+        // --- LISTENERS ---
         function startDatabaseListeners() {
-            
-            // WIKI LISTENER
             unsubscribeWiki = onSnapshot(wikiCol, (snapshot) => {
                 const wikiList = document.getElementById('wiki-list');
                 wikiList.innerHTML = ''; 
@@ -348,7 +339,6 @@
                     const page = docSnap.data();
                     const link = document.createElement('div');
                     link.className = 'wiki-link dynamic-wiki-link'; link.innerText = `📄 ${page.title}`;
-                    
                     link.addEventListener('click', () => {
                         kanbanView.style.display = 'none'; wikiView.style.display = 'flex';
                         navKanban.classList.remove('active-nav');
@@ -364,7 +354,6 @@
                 applyFilters(); 
             });
 
-            // KANBAN LISTENER
             unsubscribeTasks = onSnapshot(tasksCol, (snapshot) => {
                 document.getElementById('todo-list').innerHTML = ''; document.getElementById('doing-list').innerHTML = ''; document.getElementById('done-list').innerHTML = '';
                 snapshot.forEach((docSnap) => {
@@ -390,7 +379,7 @@
             });
         }
 
-        // --- CREATE, UPDATE & DRAG LOGIC ---
+        // --- ACTIONS ---
         document.getElementById('add-wiki-btn').addEventListener('click', async () => {
             const title = prompt("What is the title of the new Wiki page?");
             if (title) { await addDoc(wikiCol, { title: title, content: '' }); }
