@@ -144,7 +144,7 @@
 
         let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [];
 
-        // --- THEME ENGINE ---
+        // --- THEME ---
         const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'light');
         const toggleTheme = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
@@ -156,7 +156,10 @@
         // --- STABLE NEWS ARRAY ---
         window.fetchNews = async function() {
             const container = document.getElementById('news-container');
+            const syncBtn = document.getElementById('re-sync-btn');
+            
             container.innerHTML = '<p>Scanning subspace for AP News updates...</p>'; 
+            syncBtn.innerText = '⌛ Syncing...';
             
             try {
                 const rssUrl = 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en';
@@ -177,11 +180,14 @@
                     const date = item.querySelector("pubDate").textContent.split(' ')[0];
                     const desc = item.querySelector("description").textContent;
                     
-                    // DEEP IMAGE EXTRACTION
+                    // FIX: Parse description as HTML to extract the REAL image src
+                    const descDoc = parser.parseFromString(desc, "text/html");
+                    const embeddedImg = descDoc.querySelector("img");
+                    
                     let imgUrl = `https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80&sig=${i}`;
-                    const decodedDesc = new DOMParser().parseFromString(desc, "text/html").documentElement.textContent;
-                    const imgMatch = decodedDesc.match(/src="([^">]+)"/);
-                    if (imgMatch && !imgMatch[1].includes('pixel')) imgUrl = imgMatch[1];
+                    if (embeddedImg && embeddedImg.src && !embeddedImg.src.includes('pixel')) {
+                        imgUrl = embeddedImg.src;
+                    }
 
                     const card = document.createElement('div'); card.className = 'news-card';
                     card.innerHTML = `
@@ -194,7 +200,11 @@
                     `;
                     container.appendChild(card);
                 });
-            } catch (e) { container.innerHTML = '<p style="color:red;">Subspace Interference detected. Manual re-sync recommended.</p>'; }
+                syncBtn.innerText = '🔄 Re-Sync Array';
+            } catch (e) { 
+                container.innerHTML = '<p style="color:red;">Subspace Interference detected. Manual re-sync recommended.</p>'; 
+                syncBtn.innerText = '🔄 Retry Sync';
+            }
         }
 
         document.getElementById('re-sync-btn').onclick = fetchNews;
