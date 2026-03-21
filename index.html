@@ -32,35 +32,44 @@
         .active-nav { background: var(--border) !important; font-weight: 600; }
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        #kanban-view, #wiki-content-view, #news-view, #drudge-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
+        #kanban-view, #wiki-content-view, #news-view, #drudge-view { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
         /* --- TRIAGE NEWS GRID --- */
-        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
         .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
-        .news-card:hover { border-color: var(--accent); background: var(--nav-hover); transform: translateY(-2px); }
-        .news-card.read { opacity: 0.45; filter: grayscale(1); order: 1; }
+        .news-card:hover { border-color: var(--accent); background: var(--nav-hover); }
+        .news-card.read { opacity: 0.4; filter: grayscale(1); order: 1; }
         .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 12px; }
         .news-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; }
         .news-meta { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #888; }
         
         .read-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; }
-        .read-toggle input { cursor: pointer; width: 16px; height: 16px; margin: 0; }
+        .read-toggle input { cursor: pointer; width: 18px; height: 18px; margin: 0; }
 
         /* --- MOBILE SWITCHER --- */
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
-        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 18px; padding: 10px; opacity: 0.6; }
+        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 16px; padding: 10px; opacity: 0.6; flex: 1; }
         .switch-btn.active { opacity: 1; color: var(--accent); font-weight: bold; }
 
         /* --- KANBAN --- */
-        .column { width: 300px; display: flex; flex-direction: column; margin-right: 20px; }
+        .column { min-width: 300px; display: flex; flex-direction: column; margin-right: 20px; }
         .card-list { min-height: 300px; padding-bottom: 100px; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
-        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
-        .btn-toggle { background: var(--sidebar); color: var(--text); }
-        .btn-toggle.active { background: var(--accent); color: white; }
+        .toolbar { display: flex; gap: 4px; background: var(--bg); padding: 5px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px; flex-wrap: wrap; }
+        .toolbar-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: var(--text); }
 
-        @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-toggle { background: var(--sidebar); color: var(--text); border: 1px solid var(--border); }
+        .btn-toggle.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        @media (max-width: 768px) { 
+            #sidebar { display: none; } 
+            #mobile-switcher { display: flex; } 
+            #main-content { padding-bottom: 70px; }
+            #kanban-board { flex-direction: column; }
+            .column { width: 100%; margin-right: 0; margin-bottom: 30px; }
+        }
     </style>
 </head>
 <body>
@@ -68,7 +77,6 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>Jake's Workspace</h2>
-            <p style="font-size: 14px; color: #888; margin-bottom: 20px;">Identity confirmation required.</p>
             <button id="login-btn" class="btn" style="background:var(--accent); color:white; padding: 12px 24px; width: 100%;">Sign in with Google</button>
         </div>
     </div>
@@ -77,7 +85,7 @@
         <button id="switch-tasks" class="switch-btn active">📊<br><small>BOARD</small></button>
         <button id="switch-news" class="switch-btn">📰<br><small>AP</small></button>
         <button id="switch-drudge" class="switch-btn">🚨<br><small>DRUDGE</small></button>
-        <button id="mobile-theme-toggle" class="switch-btn">🌙<br><small>MODE</small></button>
+        <button id="switch-wiki" class="switch-btn">📄<br><small>WIKI</small></button>
     </div>
 
     <div id="app-container" style="display:none; width: 100%;">
@@ -109,27 +117,34 @@
 
             <div id="news-view" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 style="margin:0">AP News Feed</h2>
-                    <button id="re-sync-ap" class="btn" style="background:var(--border); color:var(--text);">🔄 Re-Sync</button>
+                    <h2 style="margin:0">AP News</h2>
+                    <button id="re-sync-ap" class="btn btn-toggle">🔄 Re-Sync</button>
                 </div>
-                <div id="news-container" class="news-grid"><p>Scanning AP frequency...</p></div>
+                <div id="news-container" class="news-grid"></div>
             </div>
 
             <div id="drudge-view" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 style="margin:0">🚨 Drudge Report Array</h2>
-                    <button id="re-sync-drudge" class="btn" style="background:var(--border); color:var(--text);">🔄 Re-Sync</button>
+                    <h2 style="margin:0">🚨 Drudge Report</h2>
+                    <button id="re-sync-drudge" class="btn btn-toggle">🔄 Re-Sync</button>
                 </div>
-                <div id="drudge-container" class="news-grid"><p>Scanning Drudge frequency...</p></div>
+                <div id="drudge-container" class="news-grid"></div>
             </div>
 
             <div id="wiki-content-view" style="display: none;">
                 <div class="wiki-header" style="border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:10px;">
                     <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:100%;">
-                    <div style="margin-top:10px; display:flex; gap:12px; align-items:center;">
+                    <div style="margin-top:10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                         <button id="wiki-mode-preview" class="btn-toggle active">Preview</button>
                         <button id="wiki-mode-edit" class="btn-toggle">Edit</button>
+                        <button id="wiki-export-pdf" class="btn-toggle">🖨️ PDF</button>
                     </div>
+                </div>
+                <div id="wiki-toolbar" class="toolbar" style="display:none;">
+                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '**', '**')">B</button>
+                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '*', '*')">I</button>
+                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '# ', '')">H1</button>
+                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '- ', '')">List</button>
                 </div>
                 <textarea id="wiki-notes" class="textarea" style="display:none; width:100%; min-height:500px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
                 <div id="wiki-preview" class="preview-area" style="overflow-y:auto;"></div>
@@ -138,12 +153,17 @@
     </div>
 
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
-        <div class="modal-content" style="background:var(--card-bg); width:90%; max-width:750px; padding:30px; border-radius:12px; position:relative;">
+        <div class="modal-content" style="background:var(--card-bg); width:95%; max-width:750px; padding:20px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
-            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:100%;">
-            <div style="margin:15px 0; display:flex; gap:10px;">
+            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:90%;">
+            <div style="margin:15px 0; display:flex; gap:10px; flex-wrap:wrap;">
                 <button id="task-mode-preview" class="btn-toggle active">Preview</button>
                 <button id="task-mode-edit" class="btn-toggle">Edit</button>
+            </div>
+            <div id="task-toolbar" class="toolbar" style="display:none;">
+                <button class="toolbar-btn" onclick="wrap('modal-notes', '**', '**')">B</button>
+                <button class="toolbar-btn" onclick="wrap('modal-notes', '*', '*')">I</button>
+                <button class="toolbar-btn" onclick="wrap('modal-notes', '- ', '')">List</button>
             </div>
             <textarea id="modal-notes" class="textarea" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
             <div id="modal-preview" class="preview-area"></div>
@@ -152,7 +172,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
@@ -163,124 +183,106 @@
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false, sortables = [];
+        let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false, sortables = [], userReadList = [];
 
-        // --- AUTH ---
-        document.getElementById('login-btn').onclick = async () => { try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); } };
+        // --- AUTH & PERSISTENCE ---
+        onAuthStateChanged(auth, async (u) => { 
+            if(u) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                // Fetch Read List from Firestore
+                const userDoc = await getDoc(doc(db, 'users', u.uid));
+                userReadList = userDoc.exists() ? userDoc.data().readArticles || [] : [];
+            } else {
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app-container').style.display = 'none';
+            }
+        });
+
+        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
-        applyTheme(localStorage.getItem('theme') || 'light');
-        document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
-        document.getElementById('mobile-theme-toggle').onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
+        // --- PERSISTENT TRIAGE LOGIC ---
+        async function toggleRead(link, shouldRead, card) {
+            const uid = auth.currentUser.uid;
+            if (shouldRead) {
+                if (!userReadList.includes(link)) userReadList.push(link);
+                card.classList.add('read');
+                card.style.order = "1";
+            } else {
+                userReadList = userReadList.filter(r => r !== link);
+                card.classList.remove('read');
+                card.style.order = "0";
+            }
+            await setDoc(doc(db, 'users', uid), { readArticles: userReadList }, { merge: true });
+        }
 
-        const debounce = (f, w) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f.apply(this, a), w); }; };
-
-        // --- ENHANCED DUAL-PROXY NEWS HANDLER ---
-        async function fetchSource(containerId, storageKey, rssUrl, sourceName) {
+        // --- NEWS ENGINE ---
+        async function fetchNews(containerId, url, sourceName) {
             const container = document.getElementById(containerId);
-            container.innerHTML = `<p>Establishing ${sourceName} uplink...</p>`;
+            container.innerHTML = `<p>Syncing ${sourceName} signal...</p>`;
+            const proxies = [`https://corsproxy.io/?${encodeURIComponent(url)}`, `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` ];
             
-            const proxies = [
-                `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`
-            ];
-
-            let text = null;
-            for (let proxy of proxies) {
-                try {
-                    const response = await fetch(`${proxy}&cb=${Date.now()}`);
-                    if (response.ok) { text = await response.text(); break; }
-                } catch (e) { continue; }
+            let data = null;
+            for (let p of proxies) {
+                try { const res = await fetch(`${p}&cb=${Date.now()}`); if(res.ok) { data = await res.text(); break; } } catch(e) {}
             }
 
-            if (!text) { 
-                container.innerHTML = `<p style="color:red;">Interference in ${sourceName} signal. Manual re-sync recommended.</p>`; 
-                return;
-            }
+            if (!data) { container.innerHTML = `<p style="color:red;">Signal Jammed. Try Re-Sync.</p>`; return; }
 
-            try {
-                const readList = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                const xml = new DOMParser().parseFromString(text, "text/xml");
-                let items = Array.from(xml.querySelectorAll("item"));
-                if (items.length === 0) items = Array.from(xml.querySelectorAll("entry"));
-
-                items.sort((a, b) => {
-                    const linkA = (a.querySelector("link")?.textContent || a.querySelector("link")?.getAttribute("href") || "");
-                    const linkB = (b.querySelector("link")?.textContent || b.querySelector("link")?.getAttribute("href") || "");
-                    const readA = readList.includes(linkA);
-                    const readB = readList.includes(linkB);
-                    return (readA === readB) ? 0 : readA ? 1 : -1;
-                });
-
-                container.innerHTML = '';
-                items.forEach((item, i) => {
-                    if (i >= 24) return;
-                    const title = item.querySelector("title")?.textContent || "Breaking Intel...";
-                    const link = item.querySelector("link")?.textContent || item.querySelector("link")?.getAttribute("href") || "#";
-                    const isRead = readList.includes(link);
-
-                    const card = document.createElement('div'); 
-                    card.className = `news-card ${isRead ? 'read' : ''}`;
-                    card.style.order = isRead ? "1" : "0";
-                    card.innerHTML = `
-                        <div class="news-title">${title}</div>
-                        <div class="news-footer">
-                            <div class="news-meta">${sourceName}</div>
-                            <label class="read-toggle">
-                                <input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read
-                            </label>
-                        </div>
-                    `;
-                    
-                    card.onclick = () => { toggleRead(link, true, card, storageKey); window.open(link, '_blank'); };
-                    const checkbox = card.querySelector('input');
-                    checkbox.onclick = (e) => { e.stopPropagation(); toggleRead(link, checkbox.checked, card, storageKey); };
-                    container.appendChild(card);
-                });
-            } catch (e) { container.innerHTML = `<p style="color:red;">Signal decoding failure.</p>`; }
-        }
-
-        function toggleRead(link, shouldBeRead, cardElement, storageKey) {
-            let currentReads = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            if (shouldBeRead && !currentReads.includes(link)) { currentReads.push(link); cardElement.classList.add('read'); cardElement.style.order = "1"; }
-            else if (!shouldBeRead) { currentReads = currentReads.filter(r => r !== link); cardElement.classList.remove('read'); cardElement.style.order = "0"; }
-            localStorage.setItem(storageKey, JSON.stringify(currentReads));
-        }
-
-        const fetchAP = () => fetchSource('news-container', 'readArticlesAP', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP NEWS');
-        const fetchDrudge = () => fetchSource('drudge-container', 'readArticlesDrudge', 'https://drudgereportfeed.com/rss.xml', 'DRUDGE REPORT');
-
-        const showView = (v) => { 
-            [document.getElementById('kanban-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('drudge-view')].forEach(div => div.style.display = 'none');
-            v.style.display = 'flex'; 
-            if (v === document.getElementById('news-view')) fetchAP();
-            if (v === document.getElementById('drudge-view')) fetchDrudge();
+            const xml = new DOMParser().parseFromString(data, "text/xml");
+            let items = Array.from(xml.querySelectorAll("item, entry"));
             
-            // Sync Mobile Switcher Active State
-            const btns = { 'kanban-view': 'switch-tasks', 'news-view': 'switch-news', 'drudge-view': 'switch-drudge' };
+            items.sort((a,b) => {
+                const linkA = a.querySelector("link")?.textContent || a.querySelector("link")?.getAttribute("href") || "";
+                return userReadList.includes(linkA) ? 1 : -1;
+            });
+
+            container.innerHTML = '';
+            items.forEach((item, i) => {
+                if (i > 24) return;
+                const title = item.querySelector("title")?.textContent || "Breaking...";
+                const link = item.querySelector("link")?.textContent || item.querySelector("link")?.getAttribute("href") || "#";
+                const isRead = userReadList.includes(link);
+
+                const card = document.createElement('div');
+                card.className = `news-card ${isRead ? 'read' : ''}`;
+                card.style.order = isRead ? "1" : "0";
+                card.innerHTML = `<div class="news-title">${title}</div><div class="news-footer"><div class="news-meta">${sourceName}</div><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label></div>`;
+                
+                card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
+                const box = card.querySelector('input');
+                box.onclick = (e) => { e.stopPropagation(); toggleRead(link, box.checked, card); };
+                container.appendChild(card);
+            });
+        }
+
+        const fetchAP = () => fetchNews('news-container', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP');
+        const fetchDrudge = () => fetchNews('drudge-container', 'https://drudgereportfeed.com/rss.xml', 'DRUDGE');
+
+        // --- NAV & UI ---
+        const showView = (v) => {
+            [document.getElementById('kanban-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('drudge-view')].forEach(d => d.style.display = 'none');
+            v.style.display = 'flex';
+            if (v.id === 'news-view') fetchAP();
+            if (v.id === 'drudge-view') fetchDrudge();
+            // Sync Mobile Nav
             document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
-            if (btns[v.id]) document.getElementById(btns[v.id]).classList.add('active');
+            const map = {'kanban-view':'switch-tasks', 'news-view':'switch-news', 'drudge-view':'switch-drudge', 'wiki-content-view':'switch-wiki'};
+            if(map[v.id]) document.getElementById(map[v.id]).classList.add('active');
         };
 
-        // --- NAVIGATION LISTENERS ---
-        document.getElementById('nav-news-sidebar').onclick = () => showView(document.getElementById('news-view'));
-        document.getElementById('nav-drudge-sidebar').onclick = () => showView(document.getElementById('drudge-view'));
-        document.getElementById('nav-kanban').onclick = () => showView(document.getElementById('kanban-view'));
         document.getElementById('switch-tasks').onclick = () => showView(document.getElementById('kanban-view'));
         document.getElementById('switch-news').onclick = () => showView(document.getElementById('news-view'));
         document.getElementById('switch-drudge').onclick = () => showView(document.getElementById('drudge-view'));
+        document.getElementById('switch-wiki').onclick = () => showView(document.getElementById('wiki-content-view'));
+        document.getElementById('nav-kanban').onclick = () => showView(document.getElementById('kanban-view'));
+        document.getElementById('nav-news-sidebar').onclick = () => showView(document.getElementById('news-view'));
+        document.getElementById('nav-drudge-sidebar').onclick = () => showView(document.getElementById('drudge-view'));
         document.getElementById('re-sync-ap').onclick = fetchAP;
         document.getElementById('re-sync-drudge').onclick = fetchDrudge;
 
         // --- BOARD LOGIC ---
-        function initSortable() {
-            sortables.forEach(s => s.destroy());
-            sortables = ['todo-list', 'doing-list', 'done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: (evt) => {
-                updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: evt.to.parentElement.getAttribute('data-status') });
-            }}));
-        }
-
         function renderBoard() {
             if (isEditing) return;
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
@@ -289,38 +291,43 @@
                 allTasks.forEach(d => {
                     const t = d.data();
                     if (t.status === status) {
-                        const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id); card.innerText = t.text;
+                        const card = document.createElement('div'); card.className = 'card'; card.innerText = t.text;
                         card.onclick = () => { curTaskId = d.id; isEditing = true; document.getElementById('modal-title-display').value = t.text; document.getElementById('modal-notes').value = t.notes || ''; document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display = 'flex'; };
                         list.appendChild(card);
                     }
                 });
             });
-            initSortable();
+            sortables.forEach(s => s.destroy());
+            sortables = ['todo-list', 'doing-list', 'done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', onEnd: (e) => updateDoc(doc(db, 'tasks', e.item.getAttribute('data-id')), { status: e.to.parentElement.getAttribute('data-status') }) }));
         }
 
-        onSnapshot(wikiCol, (snap) => {
+        onSnapshot(tasksCol, (s) => { allTasks = s.docs; renderBoard(); });
+        onSnapshot(wikiCol, (s) => {
             const list = document.getElementById('wiki-nav-list'); list.innerHTML = '';
-            snap.docs.forEach(d => {
+            s.docs.forEach(d => {
                 const item = document.createElement('div'); item.className = 'nav-item'; item.innerText = `📄 ${d.data().title}`;
-                item.onclick = () => { curWikiId = d.id; isEditing = false; showView(document.getElementById('wiki-content-view')); document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-notes').value = d.data().content || ''; document.getElementById('wiki-mode-preview').click(); }; 
+                item.onclick = () => { curWikiId = d.id; isEditing = false; showView(document.getElementById('wiki-content-view')); document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-notes').value = d.data().content || ''; document.getElementById('wiki-mode-preview').click(); };
                 list.appendChild(item);
             });
         });
 
-        onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderBoard(); });
-        onAuthStateChanged(auth, (u) => { document.getElementById('login-screen').style.display = u ? 'none' : 'flex'; document.getElementById('app-container').style.display = u ? 'flex' : 'none'; });
+        // --- TOOLS ---
+        window.wrap = (id, pre, suf) => {
+            const ta = document.getElementById(id); const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+            ta.value = v.substring(0, s) + pre + v.substring(s, e) + suf + v.substring(e);
+            ta.dispatchEvent(new Event('input'));
+        };
 
-        document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(wikiCol, { title: t, content: '', lastEdited: serverTimestamp() }); };
-        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(tasksCol, { text: t, status: 'todo' }); };
-        document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display = 'none'; isEditing = false; };
-
-        function setupToggle(p, n, pr) {
+        function setupToggle(p, n, pr, tb) {
             const bP = document.getElementById(`${p}-mode-preview`), bE = document.getElementById(`${p}-mode-edit`);
-            bP.onclick = () => { isEditing = false; n.style.display = 'none'; pr.style.display = 'block'; bP.classList.add('active'); bE.classList.remove('active'); pr.innerHTML = marked.parse(n.value || ""); };
-            bE.onclick = () => { isEditing = true; n.style.display = 'block'; pr.style.display = 'none'; bE.classList.add('active'); bP.classList.remove('active'); };
+            bP.onclick = () => { isEditing = false; n.style.display='none'; pr.style.display='block'; if(tb) document.getElementById(tb).style.display='none'; bP.classList.add('active'); bE.classList.remove('active'); pr.innerHTML = marked.parse(n.value || ""); };
+            bE.onclick = () => { isEditing = true; n.style.display='block'; pr.style.display='none'; if(tb) document.getElementById(tb).style.display='flex'; bE.classList.add('active'); bP.classList.remove('active'); };
         }
-        setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
-        setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'));
+        setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'), 'task-toolbar');
+        setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'), 'wiki-toolbar');
+
+        document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing=false; };
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(tasksCol, { text: t, status: 'todo' }); };
     </script>
 </body>
 </html>
