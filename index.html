@@ -32,9 +32,7 @@
             cursor: pointer;
         }
         
-        .wiki-link:hover {
-            background-color: #e0e0e0;
-        }
+        .wiki-link:hover { background-color: #e0e0e0; }
 
         #main-content {
             flex-grow: 1;
@@ -58,9 +56,7 @@
             font-size: 14px;
         }
         
-        .filter-btn:hover {
-            background: #efefef;
-        }
+        .filter-btn:hover { background: #efefef; }
 
         #kanban-board {
             display: flex;
@@ -73,8 +69,6 @@
             width: 33%;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            min-height: 200px; /* Ensures you can drop cards into an empty column */
         }
 
         .column-header {
@@ -85,6 +79,15 @@
             align-items: center;
         }
 
+        /* The container holding the cards inside the column */
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 200px; /* Essential so you can drop into empty columns */
+            flex-grow: 1;
+        }
+
         /* The Cards */
         .card {
             background-color: white;
@@ -92,18 +95,12 @@
             border-radius: 6px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid #e0e0e0;
-            cursor: grab; /* Shows a grabbing hand icon */
+            cursor: grab;
         }
 
-        .card:active {
-            cursor: grabbing;
-        }
+        .card:active { cursor: grabbing; }
+        .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
-        .card:hover {
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-        }
-
-        /* This class is added by JavaScript when a card is picked up */
         .dragging {
             opacity: 0.5;
             border: 2px dashed #4338ca;
@@ -123,9 +120,6 @@
         }
 
         .tag-blue { background-color: #e3e2fe; color: #4338ca; }
-        .tag-orange { background-color: #ffebd2; color: #c2410c; }
-        .tag-green { background-color: #dcfce7; color: #15803d; }
-
     </style>
 </head>
 <body>
@@ -142,71 +136,115 @@
         
         <div id="filters">
             <button class="filter-btn">All</button>
-            <button class="filter-btn">Theology</button>
-            <button class="filter-btn">Mortgage</button>
-            <button class="filter-btn">Gaming</button>
         </div>
 
         <div id="kanban-board">
             
-            <div class="column" id="todo-column">
-                <div class="column-header">To Do</div>
-                
-                <div class="card" draggable="true">
-                    <div class="tag-container">
-                        <span class="tag tag-blue">Theology</span>
-                    </div>
-                    Review G.K. Beale commentary chapter for Sunday School
-                </div>
-
-                <div class="card" draggable="true">
-                    <div class="tag-container">
-                        <span class="tag tag-green">Mortgage</span>
-                    </div>
-                    Audit pending loan applications
-                </div>
+            <div class="column" data-status="todo">
+                <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:white; border:1px solid #ccc; border-radius:4px; padding:2px 8px;">+ New</button></div>
+                <div class="card-list" id="todo-list"></div>
             </div>
 
-            <div class="column" id="doing-column">
+            <div class="column" data-status="doing">
                 <div class="column-header">In Progress</div>
-                
-                <div class="card" draggable="true">
-                    <div class="tag-container">
-                        <span class="tag tag-orange">Gaming</span>
-                    </div>
-                    Optimize base defenses in STFC
-                </div>
+                <div class="card-list" id="doing-list"></div>
             </div>
 
-            <div class="column" id="done-column">
+            <div class="column" data-status="done">
                 <div class="column-header">Done</div>
-                </div>
+                <div class="card-list" id="done-list"></div>
+            </div>
 
         </div>
     </div>
 
-    <script>
-        const cards = document.querySelectorAll('.card');
-        const columns = document.querySelectorAll('.column');
+    <script type="module">
+        // Import Firebase tools over the web (no complex server setup needed)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Tell each card what to do when you click and drag it
-        cards.forEach(card => {
-            card.addEventListener('dragstart', () => {
-                card.classList.add('dragging');
-            });
+        // Your specific database keys
+        const firebaseConfig = {
+            apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI",
+            authDomain: "kanbanjake.firebaseapp.com",
+            projectId: "kanbanjake",
+            storageBucket: "kanbanjake.firebasestorage.app",
+            messagingSenderId: "207756213915",
+            appId: "1:207756213915:web:2f546c9a9c7d28b189103e"
+        };
 
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
+        // Turn on the database
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const tasksCol = collection(db, "tasks");
+
+        let draggedCardId = null;
+
+        // 1. LISTEN TO THE DATABASE REAL-TIME
+        onSnapshot(tasksCol, (snapshot) => {
+            // Clear the columns out
+            document.getElementById('todo-list').innerHTML = '';
+            document.getElementById('doing-list').innerHTML = '';
+            document.getElementById('done-list').innerHTML = '';
+
+            // Loop through every task in the database and draw it
+            snapshot.forEach((docSnap) => {
+                const task = docSnap.data();
+                
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.draggable = true;
+                
+                // Add a default visual tag for now
+                let tagHtml = `<div class="tag-container"><span class="tag tag-blue">${task.tag || 'Task'}</span></div>`;
+                card.innerHTML = `${tagHtml}${task.text}`;
+
+                // Setup dragging for this specific card
+                card.addEventListener('dragstart', () => {
+                    draggedCardId = docSnap.id; // Remember WHICH card we picked up
+                    card.classList.add('dragging');
+                });
+                
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    draggedCardId = null;
+                });
+
+                // Put the card in the correct column based on its database status
+                if (task.status === 'todo') document.getElementById('todo-list').appendChild(card);
+                if (task.status === 'doing') document.getElementById('doing-list').appendChild(card);
+                if (task.status === 'done') document.getElementById('done-list').appendChild(card);
             });
         });
 
-        // Tell each column how to receive a dropped card
-        columns.forEach(column => {
-            column.addEventListener('dragover', e => {
-                e.preventDefault(); // Required to allow dropping
-                const draggingCard = document.querySelector('.dragging');
-                column.appendChild(draggingCard);
+        // 2. SETUP THE COLUMNS TO RECEIVE DROPPED CARDS
+        document.querySelectorAll('.card-list').forEach(list => {
+            list.addEventListener('dragover', e => e.preventDefault());
+            
+            list.addEventListener('drop', e => {
+                e.preventDefault();
+                // Find out which column we dropped it into
+                const newStatus = list.parentElement.getAttribute('data-status');
+                
+                // Update the database with the new status
+                if (draggedCardId) {
+                    const taskRef = doc(db, 'tasks', draggedCardId);
+                    updateDoc(taskRef, { status: newStatus });
+                }
             });
+        });
+
+        // 3. ADD NEW TASK BUTTON
+        document.getElementById('add-btn').addEventListener('click', async () => {
+            const text = prompt("What is the new task?");
+            if (text) {
+                // Send a brand new task to the database
+                await addDoc(tasksCol, {
+                    text: text,
+                    status: 'todo',
+                    tag: 'General'
+                });
+            }
         });
     </script>
 </body>
