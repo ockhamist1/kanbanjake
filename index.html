@@ -36,17 +36,19 @@
         .switch-btn { background: none; border: none; color: var(--text); display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: bold; opacity: 0.6; }
         .switch-btn.active { opacity: 1; color: #4338ca; }
 
+        /* --- SEARCH BARS --- */
+        .search-bar { background: var(--bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; color: inherit; outline: none; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+
         /* --- CONTENT AREAS --- */
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #kanban-view, #wiki-list-view, #wiki-content-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
 
         /* --- KANBAN BOARD --- */
         #kanban-board { display: flex; gap: 20px; flex-grow: 1; }
-        .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; height: 100%; }
+        .column { min-width: 300px; width: 300px; display: flex; flex-direction: column; height: 100%; position: relative; }
         .column-header { font-weight: 700; padding-bottom: 15px; display: flex; justify-content: space-between; font-size: 15px; }
         .card-list { flex-grow: 1; padding: 5px; min-height: 150px; }
         
-        /* Touch Action: None is the absolute requirement for mobile Firefox dragging */
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; position: relative; touch-action: none; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .handle { color: #ccc; margin-right: 10px; cursor: grab; font-size: 18px; }
         
@@ -75,6 +77,8 @@
             #mobile-switcher { display: flex; }
             #main-content { padding-bottom: 65px; }
             #kanban-board { overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px; gap: 15px; }
+            /* Small margin on the first column helps Firefox Android recognize the touch edge */
+            .column[data-status="todo"] { margin-left: 5px; }
             .column { min-width: 88vw; scroll-snap-align: center; }
             #kanban-view, #wiki-list-view, #wiki-content-view { padding: 15px; }
             .modal-content { height: 92vh; padding: 20px; }
@@ -110,7 +114,8 @@
             <div class="sidebar-section-label">Main</div>
             <div id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</div>
             
-            <div class="sidebar-section-label">All Pages</div>
+            <div class="sidebar-section-label">Wiki Library</div>
+            <input type="text" id="desktop-wiki-search" class="search-bar" placeholder="Search pages...">
             <div id="wiki-nav-list" style="flex-grow: 1; overflow-y: auto;"></div>
             
             <button id="add-wiki-btn" class="btn" style="background:none; border: 1px dashed #888; color: #888; width: 100%; margin-top: 10px;">+ New Page</button>
@@ -141,6 +146,7 @@
 
             <div id="wiki-list-view" style="display: none;">
                 <h2 style="margin-top:0">Wiki Library</h2>
+                <input type="text" id="mobile-wiki-search" class="search-bar" placeholder="Filter pages...">
                 <div id="wiki-mobile-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 <button id="add-wiki-mobile" class="btn" style="margin-top: 20px; border: 1px dashed #888;">+ Create New Page</button>
             </div>
@@ -223,7 +229,6 @@
             localStorage.setItem('theme', t);
         };
         applyTheme(localStorage.getItem('theme') || 'light');
-        
         document.getElementById('theme-toggle').onclick = document.getElementById('mobile-theme-toggle').onclick = () => {
             applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
         };
@@ -270,6 +275,21 @@
         document.getElementById('wiki-back-btn').onclick = () => showView(wikiListView);
         document.getElementById('nav-kanban').onclick = taskBtn.onclick;
 
+        // --- SEARCH LOGIC ---
+        const handleSearch = (inputId, listId) => {
+            const input = document.getElementById(inputId);
+            input.oninput = () => {
+                const term = input.value.toLowerCase();
+                const items = document.getElementById(listId).children;
+                Array.from(items).forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    item.style.display = text.includes(term) ? 'flex' : 'none';
+                });
+            };
+        };
+        handleSearch('desktop-wiki-search', 'wiki-nav-list');
+        handleSearch('mobile-wiki-search', 'wiki-mobile-list');
+
         // --- APP LOGIC ---
         function calculateCountdown(dateStr) {
             if (!dateStr) return null;
@@ -313,7 +333,7 @@
                     const p = d.data();
                     const createItem = (container) => {
                         const item = document.createElement('div');
-                        item.className = container === desktopList ? 'nav-item' : 'card';
+                        item.className = (container === desktopList) ? 'nav-item wiki-item' : 'card wiki-item-mobile';
                         item.innerText = `📄 ${p.title}`;
                         item.onclick = () => {
                             curWikiId = d.id;
@@ -382,7 +402,6 @@
         const createWiki = () => { const t = prompt("Page Title?"); if(t) addDoc(wikiCol, { title: t, content: '' }); };
         document.getElementById('add-wiki-btn').onclick = document.getElementById('add-wiki-mobile').onclick = createWiki;
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task Name?"); if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: 'General', notes: '' }); };
-        
         document.getElementById('delete-task-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; } };
         document.getElementById('delete-wiki-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); wikiBtn.click(); } };
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
