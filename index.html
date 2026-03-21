@@ -34,13 +34,18 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-content-view, #news-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
-        /* --- TEXT-ONLY NEWS GRID --- */
-        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
-        .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-        .news-card:hover { border-color: var(--accent); background: var(--nav-hover); transform: translateY(-2px); }
-        .news-card.read { opacity: 0.45; filter: grayscale(1); border-color: transparent; }
-        .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 8px; pointer-events: none; }
-        .news-meta { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #888; letter-spacing: 0.5px; pointer-events: none; }
+        /* --- TRIAGE NEWS GRID --- */
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
+        .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .news-card:hover { border-color: var(--accent); background: var(--nav-hover); }
+        .news-card.read { opacity: 0.45; filter: grayscale(1); }
+        .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 12px; }
+        .news-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; }
+        .news-meta { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #888; }
+        
+        /* Checkbox Styling */
+        .read-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; }
+        .read-toggle input { cursor: pointer; width: 16px; height: 16px; margin: 0; }
 
         /* --- KANBAN --- */
         .column { width: 300px; display: flex; flex-direction: column; margin-right: 20px; }
@@ -48,9 +53,8 @@
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
         /* --- TOOLBAR --- */
-        .toolbar { display: flex; gap: 4px; background: var(--bg); padding: 5px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px; flex-wrap: wrap; }
+        .toolbar { display: flex; gap: 4px; background: var(--bg); padding: 5px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px; }
         .toolbar-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: var(--text); }
-        .toolbar-btn:hover { background: var(--accent); color: white; }
 
         .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
         .btn-toggle { background: var(--sidebar); color: var(--text); }
@@ -132,11 +136,6 @@
                 <button id="task-mode-preview" class="btn-toggle active">Preview</button>
                 <button id="task-mode-edit" class="btn-toggle">Edit</button>
             </div>
-            <div id="task-toolbar" class="toolbar" style="display:none;">
-                <button class="toolbar-btn" onclick="wrap('modal-notes', '**', '**')">B</button>
-                <button class="toolbar-btn" onclick="wrap('modal-notes', '*', '*')">I</button>
-                <button class="toolbar-btn" onclick="wrap('modal-notes', '- ', '')">List</button>
-            </div>
             <textarea id="modal-notes" class="textarea" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
             <div id="modal-preview" class="preview-area"></div>
         </div>
@@ -169,7 +168,7 @@
 
         const debounce = (f, w) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f.apply(this, a), w); }; };
 
-        // --- CLICKABLE TEXT-ONLY NEWS ---
+        // --- TRIAGE NEWS FETCH ---
         window.fetchNews = async function() {
             const container = document.getElementById('news-container');
             container.innerHTML = '<p>Refreshing subspace array...</p>';
@@ -193,21 +192,42 @@
                     card.className = `news-card ${isRead ? 'read' : ''}`;
                     card.innerHTML = `
                         <div class="news-title">${title}</div>
-                        <div class="news-meta">AP NEWS &bull; ${date}</div>
+                        <div class="news-footer">
+                            <div class="news-meta">AP NEWS &bull; ${date}</div>
+                            <label class="read-toggle">
+                                <input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read
+                            </label>
+                        </div>
                     `;
                     
+                    // Main Click (Open Article)
                     card.onclick = () => {
-                        const currentReads = JSON.parse(localStorage.getItem('readArticles') || '[]');
-                        if (!currentReads.includes(link)) {
-                            currentReads.push(link);
-                            localStorage.setItem('readArticles', JSON.stringify(currentReads));
-                            card.classList.add('read');
-                        }
+                        toggleReadState(link, true, card);
                         window.open(link, '_blank');
                     };
+
+                    // Checkbox Click (Triage Only)
+                    const checkbox = card.querySelector('input');
+                    checkbox.onclick = (e) => {
+                        e.stopPropagation(); // Prevents opening the link
+                        toggleReadState(link, checkbox.checked, card);
+                    };
+
                     container.appendChild(card);
                 });
             } catch (e) { container.innerHTML = '<p style="color:red;">Interference detected.</p>'; }
+        }
+
+        function toggleReadState(link, shouldBeRead, cardElement) {
+            let currentReads = JSON.parse(localStorage.getItem('readArticles') || '[]');
+            if (shouldBeRead && !currentReads.includes(link)) {
+                currentReads.push(link);
+                cardElement.classList.add('read');
+            } else if (!shouldBeRead) {
+                currentReads = currentReads.filter(r => r !== link);
+                cardElement.classList.remove('read');
+            }
+            localStorage.setItem('readArticles', JSON.stringify(currentReads));
         }
 
         // --- BOARD LOGIC ---
@@ -251,7 +271,7 @@
             bP.onclick = () => { isEditing = false; n.style.display = 'none'; pr.style.display = 'block'; if(tb) document.getElementById(tb).style.display = 'none'; bP.classList.add('active'); bE.classList.remove('active'); pr.innerHTML = marked.parse(n.value || ""); };
             bE.onclick = () => { isEditing = true; n.style.display = 'block'; pr.style.display = 'none'; if(tb) document.getElementById(tb).style.display = 'flex'; bE.classList.add('active'); bP.classList.remove('active'); };
         }
-        setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'), 'task-toolbar');
+        setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
         setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'), 'wiki-toolbar');
 
         onSnapshot(wikiCol, (snap) => {
