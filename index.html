@@ -38,10 +38,10 @@
         .column-header { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .card-list { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 20px; min-height: 100px; }
         
-        /* Notice cursor changed to grab, removed old dragging class */
-        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; }
+        /* User-select none prevents the screen from highlighting text when you long-press a card */
+        .card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; cursor: grab; transition: box-shadow 0.2s; user-select: none; -webkit-user-select: none; }
         .card:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
-        .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; border: 2px dashed #4338ca; } /* SortableJS specific class */
+        .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; border: 2px dashed #4338ca; } 
         
         .tag-container { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
         .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; background-color: #e3e2fe; color: #4338ca; }
@@ -83,10 +83,14 @@
         /* --- MOBILE OPTIMIZATION --- */
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
-            #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 35vh; overflow-y: auto; box-sizing: border-box; }
+            /* Expanded height to 45vh to give more room */
+            #sidebar { width: 100%; padding: 15px; border-right: none; border-bottom: 1px solid #e0e0e0; max-height: 45vh; overflow-y: auto; box-sizing: border-box; }
             #sidebar h3 { margin-top: 5px; margin-bottom: 5px; }
-            #wiki-list { display: flex; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; margin-bottom: 10px; }
-            .wiki-link { display: inline-block; margin-bottom: 0; flex-shrink: 0; } /* Ensured they don't squish */
+            
+            /* Changed from horizontal scrolling to a wrapping "cloud" of links */
+            #wiki-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+            .wiki-link { display: inline-block; margin-bottom: 0; flex-shrink: 0; padding: 6px 10px; }
+            
             #add-wiki-btn { width: 100%; margin-top: 5px; margin-bottom: 10px; }
             .sidebar-action { padding: 8px; }
 
@@ -222,7 +226,7 @@
             if (user) {
                 loginScreen.style.display = 'none'; appContainer.style.display = 'flex';
                 startDatabaseListeners();
-                initSortable(); // Initialize Drag-and-Drop library once logged in
+                initSortable(); 
             } else {
                 loginScreen.style.display = 'flex'; appContainer.style.display = 'none';
                 if (unsubscribeTasks) unsubscribeTasks();
@@ -230,14 +234,17 @@
             }
         });
 
-        // --- SORTABLE JS INIT (The Mobile Drag Fix) ---
+        // --- FIX FOR MOBILE DRAGGING ---
         function initSortable() {
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 new Sortable(document.getElementById(id), {
-                    group: 'kanban', // Allows dragging between columns
+                    group: 'kanban', 
                     animation: 150,
-                    delay: 150, // Requires a 150ms long-press to pick up a card on mobile
-                    delayOnTouchOnly: true, // Desktop remains instant click-and-drag
+                    delay: 250, // Increased to 250ms (a solid long-press)
+                    delayOnTouchOnly: true, 
+                    touchStartThreshold: 5, // Forgives tiny finger movements during the long press
+                    fallbackOnBody: true, // CRITICAL FIX: Pops the card out of the scrolling column so it doesn't get hidden
+                    swapThreshold: 0.65,
                     onEnd: function (evt) {
                         const newStatus = evt.to.parentElement.getAttribute('data-status');
                         const taskId = evt.item.getAttribute('data-id');
@@ -370,7 +377,7 @@
                     const task = docSnap.data();
                     const card = document.createElement('div'); 
                     card.className = 'card'; 
-                    card.setAttribute('data-id', docSnap.id); // Sortable uses this ID to update the database
+                    card.setAttribute('data-id', docSnap.id);
                     
                     let tagHtml = `<div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
                     card.innerHTML = `${tagHtml}${task.text}`;
