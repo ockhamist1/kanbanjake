@@ -8,14 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* --- BASE STYLING (Light Mode) --- */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f7f7f5; color: #37352f; transition: background-color 0.3s, color 0.3s; }
+        /* --- BASE STYLING --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; height: 100vh; background-color: #f7f7f5; color: #37352f; transition: background-color 0.3s, color 0.3s; }
         
+        /* --- LOGIN SCREEN --- */
+        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; width: 100%; text-align: center; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; max-width: 400px; width: 90%; }
+        #login-btn { background: #4285F4; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: 0.2s; width: 100%; }
+        #login-btn:hover { background: #3367D6; }
+
+        /* --- MAIN APP WRAPPER --- */
+        #app-container { display: none; height: 100vh; width: 100%; flex-direction: row; }
+
         #sidebar { width: 250px; background-color: #ebebec; padding: 20px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; transition: 0.3s; }
         
         #global-search { width: 100%; padding: 8px 12px; margin-bottom: 20px; border: 1px solid #d3d3d3; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none; transition: 0.3s; }
-        #global-search:focus { border-color: #888; box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
-
+        
         .wiki-link { display: block; padding: 8px; margin-bottom: 5px; border-radius: 4px; text-decoration: none; color: #37352f; cursor: pointer; transition: 0.2s;}
         .wiki-link:hover { background-color: #dfdfdf; }
         .active-nav { background-color: #d3d3d3; font-weight: 600; }
@@ -58,13 +66,14 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;}
         #modal-title { margin: 0; font-size: 24px; }
         #close-modal { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; margin-left: 10px;}
-        #close-modal:hover { color: #333; }
-
-        #theme-toggle { margin-top: auto; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; }
-        #theme-toggle:hover { background: #dfdfdf; }
+        
+        /* Bottom Sidebar Actions */
+        .sidebar-action { margin-top: 10px; padding: 10px; background: none; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; width: 100%; text-align: center; }
+        .sidebar-action:hover { background: #dfdfdf; }
 
         /* --- DARK MODE OVERRIDES --- */
         body.dark-mode { background-color: #121212; color: #e0e0e0; }
+        body.dark-mode .login-box { background-color: #1e1e1e; border-color: #333; }
         body.dark-mode #sidebar { background-color: #1e1e1e; border-right-color: #333; }
         body.dark-mode #global-search { background-color: #2d2d2d; border-color: #444; color: #e0e0e0; }
         body.dark-mode .wiki-link { color: #e0e0e0; }
@@ -81,71 +90,75 @@
         body.dark-mode .editor-textarea:focus { background-color: #1a1a1a; border-color: #555; }
         body.dark-mode .modal-content { background-color: #1e1e1e; border-color: #333; }
         body.dark-mode .modal-header { border-bottom-color: #333; }
-        body.dark-mode #close-modal { color: #aaa; }
-        body.dark-mode #close-modal:hover { color: #fff; }
-        body.dark-mode .save-btn { background-color: #444; }
-        body.dark-mode .save-btn:hover { background-color: #555; }
-        body.dark-mode #theme-toggle { border-color: #555; color: #ccc; }
-        body.dark-mode #theme-toggle:hover { background-color: #333; }
-        body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; } /* Softer tag colors for dark mode */
+        body.dark-mode .sidebar-action { border-color: #555; color: #ccc; }
+        body.dark-mode .sidebar-action:hover { background-color: #333; }
+        body.dark-mode .tag { background-color: #2d2d44; color: #a59cff; }
 
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <input type="text" id="global-search" placeholder="Search tasks & pages...">
-
-        <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
-        
-        <h3 style="margin-top: 10px; margin-bottom: 10px; font-size: 14px; color: #777;">WIKI PAGES</h3>
-        <div id="wiki-list"></div>
-        
-        <button id="add-wiki-btn" style="margin-top: 15px; background: none; border: 1px dashed #bbb; padding: 8px; border-radius: 4px; cursor: pointer; color: #555;">+ New Page</button>
-
-        <button id="theme-toggle">🌙 Dark Mode</button>
+    <div id="login-screen">
+        <div class="login-box">
+            <h1 style="margin-top: 0; font-size: 24px;">Jake's Kanban Wiki</h1>
+            <p style="color: #666; margin-bottom: 20px;">Please sign in to access your secure database.</p>
+            <button id="login-btn">Sign in with Google</button>
+        </div>
     </div>
 
-    <div id="main-content">
+    <div id="app-container">
         
-        <div id="kanban-view">
-            <h2>Kanban Board</h2>
-            <div id="filters">
-                <button class="filter-btn active-filter">All</button>
-                <button class="filter-btn">Theology</button>
-                <button class="filter-btn">Mortgage</button>
-                <button class="filter-btn">Gaming</button>
-            </div>
+        <div id="sidebar">
+            <input type="text" id="global-search" placeholder="Search tasks & pages...">
+            <div class="wiki-link active-nav" id="nav-kanban">📊 Kanban Board</div>
+            
+            <h3 style="margin-top: 10px; margin-bottom: 10px; font-size: 14px; color: #777;">WIKI PAGES</h3>
+            <div id="wiki-list"></div>
+            
+            <button id="add-wiki-btn" style="margin-top: 15px; margin-bottom: auto; background: none; border: 1px dashed #bbb; padding: 8px; border-radius: 4px; cursor: pointer; color: #555;">+ New Page</button>
 
-            <div id="kanban-board">
-                <div class="column" data-status="todo">
-                    <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:none; border:1px solid #888; border-radius:4px; padding:2px 8px; color: inherit;">+ New</button></div>
-                    <div class="card-list" id="todo-list"></div>
-                </div>
-                <div class="column" data-status="doing">
-                    <div class="column-header">In Progress</div>
-                    <div class="card-list" id="doing-list"></div>
-                </div>
-                <div class="column" data-status="done">
-                    <div class="column-header">Done</div>
-                    <div class="card-list" id="done-list"></div>
-                </div>
-            </div>
+            <button id="theme-toggle" class="sidebar-action">🌙 Dark Mode</button>
+            <button id="logout-btn" class="sidebar-action" style="margin-top: 5px;">🚪 Log Out</button>
         </div>
 
-        <div id="wiki-view">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                <h1 id="wiki-page-title" style="margin: 0;">Page Title</h1>
-                <div>
-                    <button id="wiki-btn-edit" class="mode-btn active">Edit</button>
-                    <button id="wiki-btn-preview" class="mode-btn">Preview</button>
+        <div id="main-content">
+            <div id="kanban-view">
+                <h2>Kanban Board</h2>
+                <div id="filters">
+                    <button class="filter-btn active-filter">All</button>
+                    <button class="filter-btn">Theology</button>
+                    <button class="filter-btn">Mortgage</button>
+                    <button class="filter-btn">Gaming</button>
+                </div>
+                <div id="kanban-board">
+                    <div class="column" data-status="todo">
+                        <div class="column-header">To Do <button id="add-btn" style="cursor:pointer; background:none; border:1px solid #888; border-radius:4px; padding:2px 8px; color: inherit;">+ New</button></div>
+                        <div class="card-list" id="todo-list"></div>
+                    </div>
+                    <div class="column" data-status="doing">
+                        <div class="column-header">In Progress</div>
+                        <div class="card-list" id="doing-list"></div>
+                    </div>
+                    <div class="column" data-status="done">
+                        <div class="column-header">Done</div>
+                        <div class="card-list" id="done-list"></div>
+                    </div>
                 </div>
             </div>
-            <textarea id="wiki-page-notes" class="editor-textarea" placeholder="Start writing your wiki page here using Markdown..."></textarea>
-            <div id="wiki-page-preview" class="preview-area"></div>
-            <button id="wiki-save-btn" class="save-btn">Save Page</button>
-        </div>
 
+            <div id="wiki-view">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                    <h1 id="wiki-page-title" style="margin: 0;">Page Title</h1>
+                    <div>
+                        <button id="wiki-btn-edit" class="mode-btn active">Edit</button>
+                        <button id="wiki-btn-preview" class="mode-btn">Preview</button>
+                    </div>
+                </div>
+                <textarea id="wiki-page-notes" class="editor-textarea" placeholder="Start writing your wiki page here using Markdown..."></textarea>
+                <div id="wiki-page-preview" class="preview-area"></div>
+                <button id="wiki-save-btn" class="save-btn">Save Page</button>
+            </div>
+        </div>
     </div>
 
     <div id="editor-modal">
@@ -165,8 +178,10 @@
     </div>
 
     <script type="module">
+        // Import Database tools AND Authentication tools
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI",
@@ -179,22 +194,57 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        
         const tasksCol = collection(db, "tasks");
         const wikiCol = collection(db, "wiki");
 
-        // --- THEME TOGGLE LOGIC ---
+        // --- AUTHENTICATION LOGIC ---
+        const loginScreen = document.getElementById('login-screen');
+        const appContainer = document.getElementById('app-container');
+
+        // Login Button Click
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(error => {
+                alert("Login failed: " + error.message);
+            });
+        });
+
+        // Logout Button Click
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // Variables to stop listening to the database when we log out
+        let unsubscribeTasks = null;
+        let unsubscribeWiki = null;
+
+        // This runs automatically whenever your login status changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // USER IS LOGGED IN! Hide login, show app, start database.
+                loginScreen.style.display = 'none';
+                appContainer.style.display = 'flex';
+                startDatabaseListeners();
+            } else {
+                // USER IS LOGGED OUT! Show login, hide app, stop database.
+                loginScreen.style.display = 'flex';
+                appContainer.style.display = 'none';
+                if (unsubscribeTasks) unsubscribeTasks();
+                if (unsubscribeWiki) unsubscribeWiki();
+            }
+        });
+
+
+        // --- THEME LOGIC ---
         const themeToggleBtn = document.getElementById('theme-toggle');
-        
-        // 1. Check if user already saved a preference
         if (localStorage.getItem('theme') === 'dark') {
             document.body.classList.add('dark-mode');
             themeToggleBtn.innerText = '☀️ Light Mode';
         }
-
-        // 2. Listen for clicks to change it
         themeToggleBtn.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
-            
             if (document.body.classList.contains('dark-mode')) {
                 localStorage.setItem('theme', 'dark');
                 themeToggleBtn.innerText = '☀️ Light Mode';
@@ -204,28 +254,26 @@
             }
         });
 
-
-        // --- GLOBAL VARIABLES & DOM ---
+        // --- GLOBAL VARIABLES ---
         let draggedCardId = null;
         let currentEditingId = null;
         let currentWikiId = null;
         let currentFilter = 'All'; 
         let currentSearchTerm = ''; 
 
+        // --- VIEW SWITCHING ---
         const kanbanView = document.getElementById('kanban-view');
         const wikiView = document.getElementById('wiki-view');
         const navKanban = document.getElementById('nav-kanban');
         const searchInput = document.getElementById('global-search');
 
-        // --- NAVIGATION LOGIC ---
         navKanban.addEventListener('click', () => {
-            kanbanView.style.display = 'flex';
-            wikiView.style.display = 'none';
+            kanbanView.style.display = 'flex'; wikiView.style.display = 'none';
             navKanban.classList.add('active-nav');
             document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
         });
 
-        // --- FILTERING ENGINE ---
+        // --- FILTERING ---
         function applyFilters() {
             const filterValue = currentFilter.toLowerCase();
             const searchValue = currentSearchTerm.toLowerCase();
@@ -234,16 +282,12 @@
                 const tagElement = card.querySelector('.tag');
                 const tagText = tagElement ? tagElement.innerText.toLowerCase() : '';
                 const cardText = card.innerText.toLowerCase();
-
                 const matchesTag = (filterValue === 'all' || tagText === filterValue);
-                const matchesSearch = cardText.includes(searchValue);
-
-                card.style.display = (matchesTag && matchesSearch) ? 'block' : 'none';
+                card.style.display = (matchesTag && cardText.includes(searchValue)) ? 'block' : 'none';
             });
 
             document.querySelectorAll('.dynamic-wiki-link').forEach(link => {
-                const linkText = link.innerText.toLowerCase();
-                link.style.display = linkText.includes(searchValue) ? 'block' : 'none';
+                link.style.display = link.innerText.toLowerCase().includes(searchValue) ? 'block' : 'none';
             });
         }
 
@@ -259,7 +303,7 @@
             });
         });
 
-        // --- WIKI LOGIC ---
+        // --- WIKI & MODAL DOM LOGIC ---
         const wikiTitle = document.getElementById('wiki-page-title');
         const wikiNotes = document.getElementById('wiki-page-notes');
         const wikiPreview = document.getElementById('wiki-page-preview');
@@ -270,42 +314,83 @@
             wikiBtnEdit.classList.add('active'); wikiBtnPreview.classList.remove('active');
             wikiNotes.style.display = 'block'; wikiPreview.style.display = 'none';
         });
-
         wikiBtnPreview.addEventListener('click', () => {
             wikiBtnPreview.classList.add('active'); wikiBtnEdit.classList.remove('active');
             wikiNotes.style.display = 'none'; wikiPreview.style.display = 'block';
             wikiPreview.innerHTML = marked.parse(wikiNotes.value); 
         });
 
-        onSnapshot(wikiCol, (snapshot) => {
-            const wikiList = document.getElementById('wiki-list');
-            wikiList.innerHTML = ''; 
+        const modal = document.getElementById('editor-modal');
+        const modalNotes = document.getElementById('modal-notes');
+        const modalPreview = document.getElementById('modal-preview');
+        const modalBtnEdit = document.getElementById('modal-btn-edit');
+        const modalBtnPreview = document.getElementById('modal-btn-preview');
 
-            snapshot.forEach((docSnap) => {
-                const page = docSnap.data();
-                const link = document.createElement('div');
-                link.className = 'wiki-link dynamic-wiki-link';
-                link.innerText = `📄 ${page.title}`;
-                
-                link.addEventListener('click', () => {
-                    kanbanView.style.display = 'none';
-                    wikiView.style.display = 'flex';
-                    navKanban.classList.remove('active-nav');
-                    document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
-                    link.classList.add('active-nav');
-
-                    currentWikiId = docSnap.id;
-                    wikiTitle.innerText = page.title;
-                    wikiNotes.value = page.content || '';
-                    
-                    if(page.content) { wikiBtnPreview.click(); } else { wikiBtnEdit.click(); }
-                });
-
-                wikiList.appendChild(link);
-            });
-            applyFilters(); 
+        modalBtnEdit.addEventListener('click', () => {
+            modalBtnEdit.classList.add('active'); modalBtnPreview.classList.remove('active');
+            modalNotes.style.display = 'block'; modalPreview.style.display = 'none';
+        });
+        modalBtnPreview.addEventListener('click', () => {
+            modalBtnPreview.classList.add('active'); modalBtnEdit.classList.remove('active');
+            modalNotes.style.display = 'none'; modalPreview.style.display = 'block';
+            modalPreview.innerHTML = marked.parse(modalNotes.value); 
         });
 
+
+        // --- DATABASE LISTENERS (Only runs when logged in) ---
+        function startDatabaseListeners() {
+            
+            // WIKI LISTENER
+            unsubscribeWiki = onSnapshot(wikiCol, (snapshot) => {
+                const wikiList = document.getElementById('wiki-list');
+                wikiList.innerHTML = ''; 
+                snapshot.forEach((docSnap) => {
+                    const page = docSnap.data();
+                    const link = document.createElement('div');
+                    link.className = 'wiki-link dynamic-wiki-link'; link.innerText = `📄 ${page.title}`;
+                    
+                    link.addEventListener('click', () => {
+                        kanbanView.style.display = 'none'; wikiView.style.display = 'flex';
+                        navKanban.classList.remove('active-nav');
+                        document.querySelectorAll('.dynamic-wiki-link').forEach(l => l.classList.remove('active-nav'));
+                        link.classList.add('active-nav');
+
+                        currentWikiId = docSnap.id;
+                        wikiTitle.innerText = page.title; wikiNotes.value = page.content || '';
+                        if(page.content) { wikiBtnPreview.click(); } else { wikiBtnEdit.click(); }
+                    });
+                    wikiList.appendChild(link);
+                });
+                applyFilters(); 
+            });
+
+            // KANBAN LISTENER
+            unsubscribeTasks = onSnapshot(tasksCol, (snapshot) => {
+                document.getElementById('todo-list').innerHTML = ''; document.getElementById('doing-list').innerHTML = ''; document.getElementById('done-list').innerHTML = '';
+                snapshot.forEach((docSnap) => {
+                    const task = docSnap.data();
+                    const card = document.createElement('div'); card.className = 'card'; card.draggable = true;
+                    let tagHtml = `<div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
+                    card.innerHTML = `${tagHtml}${task.text}`;
+
+                    card.addEventListener('dragstart', () => { draggedCardId = docSnap.id; card.classList.add('dragging'); });
+                    card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedCardId = null; });
+                    card.addEventListener('click', () => {
+                        currentEditingId = docSnap.id;
+                        document.getElementById('modal-title').innerText = task.text;
+                        modalNotes.value = task.notes || ''; 
+                        modalBtnEdit.click(); modal.style.display = 'flex';
+                    });
+
+                    if (task.status === 'todo') document.getElementById('todo-list').appendChild(card);
+                    if (task.status === 'doing') document.getElementById('doing-list').appendChild(card);
+                    if (task.status === 'done') document.getElementById('done-list').appendChild(card);
+                });
+                applyFilters(); 
+            });
+        }
+
+        // --- CREATE, UPDATE & DRAG LOGIC ---
         document.getElementById('add-wiki-btn').addEventListener('click', async () => {
             const title = prompt("What is the title of the new Wiki page?");
             if (title) { await addDoc(wikiCol, { title: title, content: '' }); }
@@ -318,51 +403,6 @@
                 btn.innerText = "Saved!"; btn.style.backgroundColor = "#15803d";
                 setTimeout(() => { btn.innerText = "Save Page"; btn.style.backgroundColor = ""; }, 2000);
             }
-        });
-
-
-        // --- KANBAN LOGIC --- 
-        const modal = document.getElementById('editor-modal');
-        const modalNotes = document.getElementById('modal-notes');
-        const modalPreview = document.getElementById('modal-preview');
-        const modalBtnEdit = document.getElementById('modal-btn-edit');
-        const modalBtnPreview = document.getElementById('modal-btn-preview');
-
-        modalBtnEdit.addEventListener('click', () => {
-            modalBtnEdit.classList.add('active'); modalBtnPreview.classList.remove('active');
-            modalNotes.style.display = 'block'; modalPreview.style.display = 'none';
-        });
-
-        modalBtnPreview.addEventListener('click', () => {
-            modalBtnPreview.classList.add('active'); modalBtnEdit.classList.remove('active');
-            modalNotes.style.display = 'none'; modalPreview.style.display = 'block';
-            modalPreview.innerHTML = marked.parse(modalNotes.value); 
-        });
-
-        onSnapshot(tasksCol, (snapshot) => {
-            document.getElementById('todo-list').innerHTML = ''; document.getElementById('doing-list').innerHTML = ''; document.getElementById('done-list').innerHTML = '';
-            snapshot.forEach((docSnap) => {
-                const task = docSnap.data();
-                const card = document.createElement('div'); card.className = 'card'; card.draggable = true;
-                let tagHtml = `<div class="tag-container"><span class="tag">${task.tag || 'General'}</span></div>`;
-                card.innerHTML = `${tagHtml}${task.text}`;
-
-                card.addEventListener('dragstart', () => { draggedCardId = docSnap.id; card.classList.add('dragging'); });
-                card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedCardId = null; });
-
-                card.addEventListener('click', () => {
-                    currentEditingId = docSnap.id;
-                    document.getElementById('modal-title').innerText = task.text;
-                    modalNotes.value = task.notes || ''; 
-                    modalBtnEdit.click();
-                    modal.style.display = 'flex';
-                });
-
-                if (task.status === 'todo') document.getElementById('todo-list').appendChild(card);
-                if (task.status === 'doing') document.getElementById('doing-list').appendChild(card);
-                if (task.status === 'done') document.getElementById('done-list').appendChild(card);
-            });
-            applyFilters(); 
         });
 
         document.querySelectorAll('.card-list').forEach(list => {
