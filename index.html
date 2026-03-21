@@ -65,8 +65,7 @@
         .modal-content { background: var(--card-bg); width: 90%; max-width: 750px; height: 85vh; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; }
         
         .move-section { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 15px; }
-        .move-btn { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; font-weight: bold; cursor: pointer; color: var(--text); }
-        .move-btn:hover { background: var(--nav-hover); }
+        .move-btn { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-size: 11px; font-weight: bold; cursor: pointer; color: var(--text); }
 
         .title-input { font-size: 26px; font-weight: 800; border: none; background: transparent; width: 100%; outline: none; color: inherit; }
         .textarea { flex-grow: 1; width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 15px; font-family: inherit; font-size: 16px; margin-top: 15px; background: rgba(0,0,0,0.02); color: inherit; resize: none; outline: none; }
@@ -78,7 +77,6 @@
         .btn-save { background: var(--text); color: var(--bg); }
         .btn-delete { color: #ff4d4f; background: transparent; border: 1px solid #ff4d4f; }
 
-        /* --- MOBILE RESPONSIVE --- */
         @media (max-width: 768px) {
             #sidebar { display: none; }
             #mobile-switcher { display: flex; }
@@ -140,6 +138,7 @@
 
             <div id="wiki-list-view" style="display: none;">
                 <h2 style="margin-top:0">Wiki Library</h2>
+                <div id="wiki-tag-cloud-mobile" style="margin-bottom:10px"></div>
                 <input type="text" id="mobile-wiki-search" class="search-bar" placeholder="Filter pages...">
                 <div id="wiki-mobile-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 <button id="add-wiki-mobile" class="btn" style="margin-top: 20px; border: 1px dashed #888;">+ Create New Page</button>
@@ -148,7 +147,13 @@
             <div id="wiki-content-view" style="display: none;">
                 <div id="wiki-back-btn" style="display: none; color: var(--accent); cursor: pointer; margin-bottom: 15px; font-weight: bold;">← All Pages</div>
                 <input type="text" id="wiki-title-display" class="title-input">
-                <div style="margin-top: 10px; display: flex; justify-content: space-between;">
+                
+                <div style="display: flex; gap: 15px; align-items: center; margin: 10px 0;">
+                    <div style="font-size: 12px; font-weight: bold;">🏷️ Tag:</div>
+                    <input type="text" id="wiki-tag-input" placeholder="Project name" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 120px;">
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
                     <div>
                         <button id="wiki-mode-preview" class="btn btn-toggle active">Preview</button>
                         <button id="wiki-mode-edit" class="btn btn-toggle">Edit</button>
@@ -171,7 +176,7 @@
                 <div style="font-size: 12px; font-weight: bold;">📅 Due:</div>
                 <input type="date" id="task-due-date" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit;">
                 <div style="font-size: 12px; font-weight: bold;">🏷️ Tag:</div>
-                <input type="text" id="task-tag-input" placeholder="Category" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 100px;">
+                <input type="text" id="task-tag-input" placeholder="Project name" style="border: 1px solid var(--border); border-radius: 4px; padding: 4px; background: transparent; color: inherit; width: 100px;">
             </div>
 
             <div style="margin-top: 15px;">
@@ -239,7 +244,6 @@
             }
         });
 
-        // --- VIEW CONTROLS ---
         const kanbanView = document.getElementById('kanban-view');
         const wikiListView = document.getElementById('wiki-list-view');
         const wikiContentView = document.getElementById('wiki-content-view');
@@ -256,9 +260,59 @@
         wikiBtn.onclick = () => { if (window.innerWidth <= 768) showView(wikiListView); else showView(wikiContentView); wikiBtn.classList.add('active'); taskBtn.classList.remove('active'); };
         document.getElementById('wiki-back-btn').onclick = () => showView(wikiListView);
 
-        // --- CORE LOGIC ---
+        let allTasks = [], allWiki = [];
+
+        function updateTagCloud() {
+            const tags = new Set(['All']);
+            allTasks.forEach(t => { if(t.data().tag) tags.add(t.data().tag); });
+            allWiki.forEach(w => { if(w.data().tag) tags.add(w.data().tag); });
+
+            const cloud = document.getElementById('tag-cloud');
+            cloud.innerHTML = '';
+            tags.forEach(tag => {
+                const pill = document.createElement('div'); pill.className = `tag-pill ${currentTagFilter === tag ? 'active' : ''}`;
+                pill.innerText = tag; pill.onclick = () => { currentTagFilter = tag; renderApp(); };
+                cloud.appendChild(pill);
+            });
+        }
+
+        function renderApp() {
+            updateTagCloud();
+            
+            // Render Tasks
+            ['todo-list', 'doing-list', 'done-list'].forEach(id => document.getElementById(id).innerHTML = '');
+            allTasks.forEach(d => {
+                const t = d.data();
+                if (currentTagFilter !== 'All' && t.tag !== currentTagFilter) return;
+                const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
+                const diff = Math.ceil((new Date(t.dueDate + "T23:59:59") - new Date()) / (1000 * 60 * 60 * 24));
+                let cdHtml = t.dueDate ? `<div class="countdown ${diff < 0 ? 'overdue' : (diff <= 3 ? 'soon' : 'later')}">${diff < 0 ? 'OVERDUE' : (diff === 0 ? 'DUE TODAY' : `${diff} DAYS LEFT`)}</div>` : '';
+                card.innerHTML = `${t.text} ${cdHtml}`;
+                card.onclick = () => openTask(d.id, t);
+                document.getElementById(`${t.status}-list`).appendChild(card);
+            });
+
+            // Render Wiki
+            const dList = document.getElementById('wiki-nav-list'), mList = document.getElementById('wiki-mobile-list');
+            dList.innerHTML = ''; mList.innerHTML = '';
+            allWiki.forEach(d => {
+                const p = d.data();
+                if (currentTagFilter !== 'All' && p.tag !== currentTagFilter) return;
+                
+                const createItem = (container) => {
+                    const item = document.createElement('div'); item.className = (container === dList) ? 'nav-item' : 'card';
+                    item.innerHTML = `📄 ${p.title}`;
+                    item.onclick = () => { curWikiId = d.id; openWiki(p); };
+                    container.appendChild(item);
+                };
+                createItem(dList); createItem(mList);
+            });
+        }
+
         function startApp() {
-            // Drag-and-drop remains for desktop/compatible browsers
+            onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderApp(); });
+            onSnapshot(wikiCol, (snap) => { allWiki = snap.docs; renderApp(); });
+            
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 new Sortable(document.getElementById(id), {
                     group: 'kanban', animation: 150, onEnd: (evt) => {
@@ -268,52 +322,9 @@
                     }
                 });
             });
-
-            onSnapshot(tasksCol, (snap) => {
-                const tasks = snap.docs;
-                const tags = new Set(['All']);
-                tasks.forEach(d => { if(d.data().tag) tags.add(d.data().tag); });
-                const cloud = document.getElementById('tag-cloud'); cloud.innerHTML = '';
-                tags.forEach(tag => {
-                    const pill = document.createElement('div'); pill.className = `tag-pill ${currentTagFilter === tag ? 'active' : ''}`;
-                    pill.innerText = tag; pill.onclick = () => { currentTagFilter = tag; startApp(); };
-                    cloud.appendChild(pill);
-                });
-
-                ['todo-list', 'doing-list', 'done-list'].forEach(id => document.getElementById(id).innerHTML = '');
-                tasks.forEach(d => {
-                    const t = d.data();
-                    if (currentTagFilter !== 'All' && t.tag !== currentTagFilter) return;
-                    const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
-                    const diff = Math.ceil((new Date(t.dueDate + "T23:59:59") - new Date()) / (1000 * 60 * 60 * 24));
-                    let cdHtml = t.dueDate ? `<div class="countdown ${diff < 0 ? 'overdue' : (diff <= 3 ? 'soon' : 'later')}">${diff < 0 ? 'OVERDUE' : (diff === 0 ? 'DUE TODAY' : `${diff} DAYS LEFT`)}</div>` : '';
-                    card.innerHTML = `${t.text} ${cdHtml}`;
-                    card.onclick = () => openTask(d.id, t);
-                    document.getElementById(`${t.status}-list`).appendChild(card);
-                });
-            });
-
-            onSnapshot(wikiCol, (snap) => {
-                const dList = document.getElementById('wiki-nav-list'), mList = document.getElementById('wiki-mobile-list');
-                dList.innerHTML = ''; mList.innerHTML = '';
-                snap.forEach(d => {
-                    const p = d.data();
-                    const createItem = (container) => {
-                        const item = document.createElement('div'); item.className = (container === dList) ? 'nav-item' : 'card';
-                        item.innerText = `📄 ${p.title}`; item.onclick = () => { curWikiId = d.id; openWiki(p); };
-                        container.appendChild(item);
-                    };
-                    createItem(dList); createItem(mList);
-                });
-            });
         }
 
-        window.moveTask = async (status) => {
-            if (curTaskId) {
-                await updateDoc(doc(db, 'tasks', curTaskId), { status: status });
-                document.getElementById('editor-modal').style.display = 'none';
-            }
-        };
+        window.moveTask = async (status) => { if (curTaskId) { await updateDoc(doc(db, 'tasks', curTaskId), { status: status }); document.getElementById('editor-modal').style.display = 'none'; } };
 
         const setupToggle = (prefix, notesEl, previewEl) => {
             const btnP = document.getElementById(`${prefix}-mode-preview`), btnE = document.getElementById(`${prefix}-mode-edit`);
@@ -336,6 +347,7 @@
         function openWiki(p) {
             showView(wikiContentView);
             document.getElementById('wiki-title-display').value = p.title;
+            document.getElementById('wiki-tag-input').value = p.tag || '';
             document.getElementById('wiki-notes').value = p.content || '';
             document.getElementById('wiki-mode-preview').click();
         }
@@ -345,12 +357,12 @@
             document.getElementById('editor-modal').style.display = 'none';
         };
         document.getElementById('wiki-save-btn').onclick = async () => {
-            await updateDoc(doc(db, 'wiki', curWikiId), { title: document.getElementById('wiki-title-display').value, content: document.getElementById('wiki-notes').value });
+            await updateDoc(doc(db, 'wiki', curWikiId), { title: document.getElementById('wiki-title-display').value, content: document.getElementById('wiki-notes').value, tag: document.getElementById('wiki-tag-input').value });
             alert("Saved!");
         };
 
-        document.getElementById('add-wiki-btn').onclick = document.getElementById('add-wiki-mobile').onclick = () => { const t = prompt("Page Title?"); if(t) addDoc(wikiCol, { title: t, content: '' }); };
-        document.getElementById('add-btn').onclick = () => { const t = prompt("Task Name?"); if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: 'General', notes: '' }); };
+        document.getElementById('add-wiki-btn').onclick = document.getElementById('add-wiki-mobile').onclick = () => { const t = prompt("Page Title?"); if(t) addDoc(wikiCol, { title: t, content: '', tag: currentTagFilter !== 'All' ? currentTagFilter : '' }); };
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task Name?"); if(t) addDoc(tasksCol, { text: t, status: 'todo', tag: currentTagFilter !== 'All' ? currentTagFilter : 'General', notes: '' }); };
         document.getElementById('delete-task-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'tasks', curTaskId)); document.getElementById('editor-modal').style.display = 'none'; } };
         document.getElementById('delete-wiki-btn').onclick = () => { if(confirm("Delete?")) { deleteDoc(doc(db, 'wiki', curWikiId)); wikiBtn.click(); } };
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display = 'none';
