@@ -21,6 +21,7 @@
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); overflow: hidden; display: flex; transition: background 0.3s; }
+        
         #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
         
@@ -33,24 +34,33 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-content-view, #news-view { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
-        .tag-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card-bg); font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; margin-right: 8px; }
-        .tag-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
-
+        /* --- NEWS GRID --- */
         .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; margin-top: 20px; }
         .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; height: 100%; }
+        .news-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 24px rgba(0,0,0,0.12); }
         .news-img { width: 100%; height: 180px; object-fit: cover; background: var(--sidebar); border-bottom: 1px solid var(--border); }
         .news-body { padding: 16px; flex-grow: 1; }
-        .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); }
+        .news-title { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 10px; }
 
+        /* --- KANBAN --- */
         .column { width: 300px; display: flex; flex-direction: column; }
-        .card-list { min-height: 200px; padding-bottom: 50px; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; }
+        .card-list { min-height: 250px; padding-bottom: 50px; }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
-        .toolbar { display: flex; gap: 4px; background: var(--bg); padding: 5px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px; }
+        /* --- TOOLBAR --- */
+        .toolbar { display: flex; gap: 4px; background: var(--bg); padding: 5px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px; flex-wrap: wrap; }
         .toolbar-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: var(--text); }
+        .toolbar-btn:hover { background: var(--accent); color: white; }
+
+        .tag-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card-bg); font-size: 12px; font-weight: 600; cursor: pointer; height: fit-content; flex-shrink: 0; margin-right: 8px; }
+        .tag-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
 
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-toggle { background: var(--sidebar); color: var(--text); }
+        .btn-toggle.active { background: var(--accent); color: white; }
+
         @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } }
     </style>
 </head>
@@ -59,8 +69,14 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>Jake's Workspace</h2>
-            <button id="login-btn" class="btn" style="background:var(--accent); color:white; padding: 12px 24px; border:none; border-radius:6px; cursor:pointer;">Sign in with Google</button>
+            <button id="login-btn" class="btn" style="background:var(--accent); color:white; padding: 12px 24px;">Sign in with Google</button>
         </div>
+    </div>
+
+    <div id="mobile-switcher">
+        <button id="switch-tasks" class="switch-btn active" style="background:none; border:none; color:var(--text); cursor:pointer;">📊<br><small>BOARD</small></button>
+        <button id="switch-news" class="switch-btn" style="background:none; border:none; color:var(--text); cursor:pointer;">📰<br><small>NEWS</small></button>
+        <button id="mobile-theme-toggle" class="switch-btn" style="background:none; border:none; color:var(--text); cursor:pointer;">🌙<br><small>THEME</small></button>
     </div>
 
     <div id="app-container" style="display:none; width: 100%;">
@@ -70,10 +86,10 @@
             <div id="nav-news-sidebar" class="nav-item">📰 AP News Feed</div>
             <div class="sidebar-section-label">Wiki Library</div>
             <div id="wiki-nav-list" style="flex-grow: 1; overflow-y: auto;"></div>
-            <button id="add-wiki-btn" class="btn" style="background:none; border: 1px dashed #888; color:#888; width:100%; margin-top:10px; padding:8px; cursor:pointer;">+ New Page</button>
+            <button id="add-wiki-btn" class="btn" style="background:none; border: 1px dashed #888; color:#888; width:100%; margin-top:10px;">+ New Page</button>
             <div style="margin-top: 20px; display: flex; gap: 8px;">
-                <button id="theme-toggle" class="btn" style="flex: 1; background: var(--border); color:var(--text); padding:8px; border:none; border-radius:6px; cursor:pointer;">🌙 Mode</button>
-                <button id="logout-btn" class="btn" style="flex: 1; background: var(--border); color:var(--text); padding:8px; border:none; border-radius:6px; cursor:pointer;">🚪 Out</button>
+                <button id="theme-toggle" class="btn" style="flex: 1; background: var(--border); color:var(--text);">🌙 Mode</button>
+                <button id="logout-btn" class="btn" style="flex: 1; background: var(--border); color:var(--text);">🚪 Out</button>
             </div>
         </div>
 
@@ -82,7 +98,7 @@
                 <div id="tag-cloud" style="display:flex; padding-bottom:15px; overflow-x:auto;"></div>
                 <div id="kanban-board" style="display:flex; gap:20px;">
                     <div class="column" data-status="todo">
-                        <div class="column-header" style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" style="background:var(--accent); color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">+</button></div>
+                        <div class="column-header" style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between; align-items:center;">To Do <button id="add-btn" class="btn" style="background:var(--accent); color:white; padding:4px 12px;">+ Add</button></div>
                         <div id="todo-list" class="card-list"></div>
                     </div>
                     <div class="column" data-status="doing"><div class="column-header" style="font-weight:700; padding-bottom:15px;">Doing</div><div id="doing-list" class="card-list"></div></div>
@@ -102,8 +118,8 @@
                 <div class="wiki-header" style="border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:10px;">
                     <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:100%;" placeholder="Page Title">
                     <div style="margin-top:10px; display:flex; gap:12px; align-items:center;">
-                        <button id="wiki-mode-preview" class="active" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Preview</button>
-                        <button id="wiki-mode-edit" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Edit</button>
+                        <button id="wiki-mode-preview" class="btn-toggle active" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Preview</button>
+                        <button id="wiki-mode-edit" class="btn-toggle" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Edit</button>
                         <button id="wiki-export-pdf" style="background:var(--border); border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">🖨️ PDF</button>
                     </div>
                 </div>
@@ -111,23 +127,24 @@
                     <button class="toolbar-btn" onclick="wrap('wiki-notes', '**', '**')">B</button>
                     <button class="toolbar-btn" onclick="wrap('wiki-notes', '*', '*')">I</button>
                     <button class="toolbar-btn" onclick="wrap('wiki-notes', '# ', '')">H1</button>
+                    <button class="toolbar-btn" onclick="wrap('wiki-notes', '## ', '')">H2</button>
                     <button class="toolbar-btn" onclick="wrap('wiki-notes', '- ', '')">List</button>
                 </div>
-                <textarea id="wiki-notes" class="textarea" style="display:none; width:100%; min-height:500px; background:transparent; border:1px solid var(--border); border-radius:8px; color:inherit;"></textarea>
-                <div id="wiki-preview" class="preview-area" style="overflow-y:auto;"></div>
+                <textarea id="wiki-notes" class="textarea" style="display:none; width:100%; min-height:500px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
+                <div id="wiki-preview" class="preview-area"></div>
             </div>
         </div>
     </div>
 
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center;">
-        <div class="modal-content" style="background:var(--card-bg); width:90%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
-            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+        <div class="modal-content" style="background:var(--card-bg); width:90%; max-width:750px; padding:30px; border-radius:12px; position:relative;">
+            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
             <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:100%;">
             <div style="margin:15px 0; display:flex; gap:10px;">
-                <button id="task-mode-preview" class="active" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Preview</button>
-                <button id="task-mode-edit" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Edit</button>
+                <button id="task-mode-preview" class="btn-toggle active" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Preview</button>
+                <button id="task-mode-edit" class="btn-toggle" style="padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">Edit</button>
             </div>
-            <textarea id="modal-notes" class="textarea" style="display:none; width:100%; min-height:300px; background:transparent; border:1px solid var(--border); border-radius:8px; color:inherit;"></textarea>
+            <textarea id="modal-notes" class="textarea" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
             <div id="modal-preview" class="preview-area"></div>
         </div>
     </div>
@@ -147,10 +164,12 @@
 
         let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], currentTagFilter = 'All';
 
+        // --- THEME ---
         const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'light');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
 
+        // --- MARKDOWN WRAP ---
         window.wrap = (id, pre, suf) => {
             const ta = document.getElementById(id);
             const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
@@ -158,6 +177,9 @@
             ta.dispatchEvent(new Event('input'));
         };
 
+        const debounce = (f, w) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f.apply(this, a), w); }; };
+
+        // --- ENHANCED IMAGE NEWS FETCH ---
         window.fetchNews = async function() {
             const container = document.getElementById('news-container');
             container.innerHTML = '<p>Scanning subspace frequencies...</p>';
@@ -174,13 +196,14 @@
                     const desc = item.querySelector("description").textContent;
                     const link = item.querySelector("link").textContent;
                     
-                    // IMPROVED IMAGE SCAN
+                    // DEEP IMAGE SCAN
                     let imgUrl = `https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80&sig=${i}`;
-                    const imgMatch = desc.match(/src="([^">]+)"/);
-                    if (imgMatch && !imgMatch[1].includes('pixel')) imgUrl = imgMatch[1];
+                    const htmlDoc = new DOMParser().parseFromString(desc, "text/html");
+                    const img = htmlDoc.querySelector("img");
+                    if (img && img.src && !img.src.includes('pixel')) imgUrl = img.src;
 
                     const card = document.createElement('div'); card.className = 'news-card';
-                    card.innerHTML = `<img class="news-img" src="${imgUrl}"><div class="news-body"><div class="news-title">${title}</div><a href="${link}" target="_blank" style="color:var(--accent); font-size:11px; font-weight:bold; text-decoration:none; margin-top:10px; display:block;">Read More →</a></div>`;
+                    card.innerHTML = `<img class="news-img" src="${imgUrl}"><div class="news-body"><div class="news-title">${title}</div><a href="${link}" target="_blank" style="color:var(--accent); font-size:11px; font-weight:bold; text-decoration:none;">Read Intel →</a></div>`;
                     container.appendChild(card);
                 });
             } catch (e) { container.innerHTML = '<p style="color:red;">Interference detected. Re-sync array manually.</p>'; }
@@ -204,6 +227,7 @@
         setupToggle('task', document.getElementById('modal-notes'), document.getElementById('modal-preview'));
         setupToggle('wiki', document.getElementById('wiki-notes'), document.getElementById('wiki-preview'), 'wiki-toolbar');
 
+        // --- KANBAN RENDER ---
         function renderBoard() {
             ['todo-list', 'doing-list', 'done-list'].forEach(id => {
                 const list = document.getElementById(id); list.innerHTML = '';
@@ -216,9 +240,16 @@
                         list.appendChild(card);
                     }
                 });
-                new Sortable(list, { group: 'kanban', animation: 150, onEnd: (evt) => { const newStatus = evt.to.parentElement.getAttribute('data-status'); updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: newStatus }); } });
             });
         }
+
+        // --- INITIALIZE SORTABLE ONCE ---
+        ['todo-list', 'doing-list', 'done-list'].forEach(id => {
+            new Sortable(document.getElementById(id), { group: 'kanban', animation: 150, onEnd: (evt) => {
+                const newStatus = evt.to.parentElement.getAttribute('data-status');
+                updateDoc(doc(db, 'tasks', evt.item.getAttribute('data-id')), { status: newStatus });
+            }});
+        });
 
         onSnapshot(wikiCol, (snap) => {
             const list = document.getElementById('wiki-nav-list'); list.innerHTML = '';
@@ -231,6 +262,12 @@
         });
 
         onSnapshot(tasksCol, (snap) => { allTasks = snap.docs; renderBoard(); });
+
+        const autoSave = debounce(async () => {
+            if (curWikiId) await updateDoc(doc(db, 'wiki', curWikiId), { title: document.getElementById('wiki-title-display').value, content: document.getElementById('wiki-notes').value, lastEdited: serverTimestamp() });
+        }, 1500);
+        document.getElementById('wiki-notes').oninput = autoSave;
+        document.getElementById('wiki-title-display').oninput = autoSave;
 
         onAuthStateChanged(auth, (u) => { if(u) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-container').style.display = 'flex'; } });
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
