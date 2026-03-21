@@ -27,19 +27,17 @@
         
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .sidebar-section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 5px; }
-        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; font-size: 14px; transition: 0.1s; display: block; }
+        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; font-size: 14px; transition: 0.1s; display: block; border: none; background: none; width: 100%; text-align: left; color: inherit; }
         .nav-item:hover { background: var(--nav-hover); }
         .active-nav { background: var(--border) !important; font-weight: 600; }
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-list-view, #wiki-content-view, #news-view, #drudge-view { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
 
-        /* --- SYNC INDICATOR --- */
         #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e; opacity: 0; transition: 0.3s; z-index: 6000; }
         #sync-indicator.syncing { opacity: 1; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
-        /* --- TRIAGE NEWS GRID --- */
         .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
         .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .news-card.read { opacity: 0.4; filter: grayscale(1); order: 1; }
@@ -47,12 +45,10 @@
         .news-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; }
         .read-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; }
 
-        /* --- KANBAN --- */
         .column { min-width: 300px; display: flex; flex-direction: column; margin-right: 20px; }
         .card-list { min-height: 300px; padding-bottom: 100px; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; }
 
-        /* --- MOBILE SWITCHER --- */
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 14px; padding: 10px; opacity: 0.6; flex: 1; }
         .switch-btn.active { opacity: 1; color: var(--accent); font-weight: bold; }
@@ -67,7 +63,7 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>Jake's Workspace</h2>
-            <button id="login-btn" class="btn" style="background:var(--accent); color:white; padding: 12px 24px; border:none; border-radius:6px; cursor:pointer;">Sign in with Google</button>
+            <button id="login-btn" style="background:var(--accent); color:white; padding: 12px 24px; border:none; border-radius:6px; cursor:pointer;">Sign in with Google</button>
         </div>
     </div>
 
@@ -81,9 +77,9 @@
     <div id="app-container" style="display:none; width: 100%;">
         <div id="sidebar">
             <div class="sidebar-section-label">Main</div>
-            <div id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</div>
-            <div id="nav-news" class="nav-item">📰 AP News Feed</div>
-            <div id="nav-drudge" class="nav-item">🚨 Drudge Report</div>
+            <button id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</button>
+            <button id="nav-news" class="nav-item">📰 AP News Feed</button>
+            <button id="nav-drudge" class="nav-item">🚨 Drudge Report</button>
             <div class="sidebar-section-label">Wiki Library</div>
             <div id="sidebar-wiki-list" style="flex-grow: 1; overflow-y: auto;"></div>
             <button id="add-wiki-btn" style="background:none; border:1px dashed #888; color:#888; width:100%; padding:8px; cursor:pointer; margin-top:10px;">+ New Page</button>
@@ -120,7 +116,7 @@
                     <div style="margin-top:10px; display:flex; gap:10px;">
                         <button id="wiki-mode-preview" class="active" style="padding:6px 12px; cursor:pointer;">Preview</button>
                         <button id="wiki-mode-edit" style="padding:6px 12px; cursor:pointer;">Edit</button>
-                        <button onclick="showView(document.getElementById('wiki-list-view'))" style="padding:6px 12px; cursor:pointer;">List</button>
+                        <button id="back-to-wiki" style="padding:6px 12px; cursor:pointer;">List</button>
                     </div>
                 </div>
                 <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:10px;"></textarea>
@@ -133,10 +129,7 @@
         <div class="modal-content" style="background:var(--card-bg); width:95%; max-width:750px; padding:20px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
             <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:90%;">
-            <div style="margin:15px 0; display:flex; gap:10px;">
-                <button id="task-mode-preview" class="active" style="padding:6px 12px; cursor:pointer;">Preview</button>
-                <button id="task-mode-edit" style="padding:6px 12px; cursor:pointer;">Edit</button>
-            </div>
+            <div style="margin:15px 0; display:flex; gap:10px;"><button id="task-mode-preview" class="active" style="padding:6px 12px; cursor:pointer;">Preview</button><button id="task-mode-edit" style="padding:6px 12px; cursor:pointer;">Edit</button></div>
             <textarea id="modal-notes" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit;"></textarea>
             <div id="modal-preview"></div>
         </div>
@@ -193,7 +186,7 @@
                 const items = Array.from(xml.querySelectorAll("item, entry"));
                 container.innerHTML = '';
                 items.forEach((item, i) => {
-                    if (i > 24) return;
+                    if (i > 30) return;
                     const title = item.querySelector("title")?.textContent || "Breaking...";
                     const link = item.querySelector("link")?.textContent || item.querySelector("link")?.getAttribute("href") || "#";
                     const isRead = userReadList.includes(link);
@@ -209,7 +202,7 @@
         };
 
         window.fetchAP = () => fetchNews('news-container', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP');
-        window.fetchDrudge = () => fetchNews('drudge-container', 'https://feeds.feedburner.com/drudge-report-feed', 'DRUDGE');
+        window.fetchDrudge = () => fetchNews('drudge-container', 'https://drudgereportfeed.com/rss.xml', 'DRUDGE');
 
         function renderBoard() {
             if (isEditing) return;
@@ -231,13 +224,16 @@
         }
 
         onSnapshot(collection(db, "tasks"), (s) => { allTasks = s.docs; renderBoard(); });
+        
         onSnapshot(collection(db, "wiki"), (s) => {
             const side = document.getElementById('sidebar-wiki-list'), mob = document.getElementById('mobile-wiki-list');
             side.innerHTML = ''; mob.innerHTML = '';
             s.docs.forEach(d => {
-                const btn = document.createElement('div'); btn.className = 'nav-item'; btn.innerText = d.data().title;
+                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = d.data().title;
                 btn.onclick = () => { curWikiId = d.id; isEditing = false; document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-notes').value = d.data().content || ''; document.getElementById('wiki-mode-preview').click(); showView(document.getElementById('wiki-content-view')); };
-                side.appendChild(btn.cloneNode(true)); mob.appendChild(btn);
+                side.appendChild(btn); mob.appendChild(btn.cloneNode(true));
+                // Fix for cloned node listeners
+                mob.lastChild.onclick = btn.onclick;
             });
         });
 
@@ -245,7 +241,7 @@
             [document.getElementById('kanban-view'), document.getElementById('wiki-list-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('drudge-view')].forEach(d => d.style.display = 'none');
             v.style.display = 'flex';
             document.querySelectorAll('.switch-btn, .nav-item').forEach(b => b.classList.remove('active', 'active-nav'));
-            const map = {'kanban-view':'switch-tasks', 'news-view':'switch-news', 'drudge-view':'switch-drudge', 'wiki-list-view':'switch-wiki'};
+            const map = {'kanban-view':'switch-tasks', 'news-view':'switch-news', 'drudge-view':'switch-drudge', 'wiki-list-view':'switch-wiki', 'wiki-content-view':'switch-wiki'};
             if(map[v.id]) document.getElementById(map[v.id]).classList.add('active');
         };
 
@@ -272,6 +268,7 @@
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo' }); };
         document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
+        document.getElementById('back-to-wiki').onclick = () => showView(document.getElementById('wiki-list-view'));
     </script>
 </body>
 </html>
