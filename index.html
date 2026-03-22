@@ -12,32 +12,31 @@
         :root { 
             --bg: #f7f7f5; --text: #37352f; --sidebar: #ebebec; --border: #e0e0e0; 
             --card-bg: #ffffff; --accent: #4338ca; --nav-hover: rgba(0,0,0,0.05);
-            --mortgage-bg: #dbeafe; --church-bg: #dcfce7; --ss-bg: #fef9c3; --urgent-bg: #fee2e2;
+            --m-badge: #dbeafe; --m-text: #1e40af; --c-badge: #dcfce7; --c-text: #166534;
+            --s-badge: #fef9c3; --s-text: #854d0e; --u-badge: #fee2e2; --u-text: #991b1b;
         }
-        body.dark-mode { 
+        [data-theme="dark"] { 
             --bg: #121212; --text: #e0e0e0; --sidebar: #1e1e1e; --border: #333; 
             --card-bg: #1e1e1e; --accent: #818cf8; --nav-hover: rgba(255,255,255,0.05);
-            --mortgage-bg: #1e3a8a; --church-bg: #064e3b; --ss-bg: #713f12; --urgent-bg: #7f1d1d;
+            --m-badge: #1e3a8a; --m-text: #dbeafe; --c-badge: #064e3b; --c-text: #dcfce7;
+            --s-badge: #713f12; --s-text: #fef9c3; --u-badge: #7f1d1d; --u-text: #fee2e2;
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; }
         
-        #search-palette { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 99999; display: none; justify-content: center; padding-top: 100px; }
-        .search-box { background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 25px 50px rgba(0,0,0,0.5); overflow: hidden; height: fit-content; }
+        /* --- SEARCH (Cmd+K) --- */
+        #search-palette { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); z-index: 2147483647; display: none; justify-content: center; padding-top: 100px; }
+        .search-box { background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 30px 60px rgba(0,0,0,0.5); overflow: hidden; height: fit-content; }
         #search-input { width: 100%; padding: 20px; font-size: 18px; border: none; background: transparent; color: var(--text); outline: none; border-bottom: 1px solid var(--border); }
         .search-item { padding: 15px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin: 5px; color: var(--text); }
         .search-item:hover { background: var(--nav-hover); }
 
-        /* --- HARD-CODED CATEGORY COLORS --- */
+        /* --- CATEGORY COLORS --- */
         .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
-        .badge-mortgage { background: var(--mortgage-bg) !important; color: #1e40af !important; }
-        .badge-church { background: var(--church-bg) !important; color: #166534 !important; }
-        .badge-sunday-school { background: var(--ss-bg) !important; color: #854d0e !important; }
-        .badge-urgent { background: var(--urgent-bg) !important; color: #991b1b !important; }
-        .dark-mode .badge-mortgage { color: #dbeafe !important; }
-        .dark-mode .badge-church { color: #dcfce7 !important; }
-        .dark-mode .badge-sunday-school { color: #fef9c3 !important; }
-        .dark-mode .badge-urgent { color: #fee2e2 !important; }
+        .badge-mortgage { background: var(--m-badge) !important; color: var(--m-text) !important; }
+        .badge-church { background: var(--c-badge) !important; color: var(--c-text) !important; }
+        .badge-sunday-school { background: var(--s-badge) !important; color: var(--s-text) !important; }
+        .badge-urgent { background: var(--u-badge) !important; color: var(--u-text) !important; }
 
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
@@ -45,16 +44,20 @@
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; transition: 0.2s; }
+        .card:hover { border-color: var(--accent); }
 
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } }
+        
+        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
+        .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
     </style>
 </head>
-<body class="light-mode">
+<body data-theme="light">
     <div id="search-palette">
         <div class="search-box">
-            <input type="text" id="search-input" placeholder="Jump to task or page..." autocomplete="off">
+            <input type="text" id="search-input" placeholder="Jump to anywhere..." autocomplete="off">
             <div id="search-results" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
     </div>
@@ -70,10 +73,11 @@
         <div id="sidebar">
             <div style="font-size:11px; font-weight:800; color:#888; margin-bottom:10px;">WORKSPACE</div>
             <button class="nav-item active" data-view="kanban-view">📊 Board</button>
-            <button class="nav-item" data-view="news-view">📰 News</button>
-            <button class="nav-item" data-view="freebies-view">🎁 Deals</button>
+            <button class="nav-item" data-view="news-view">📰 News Feed</button>
+            <button class="nav-item" data-view="freebies-view">🎁 Deals Feed</button>
             <div style="font-size:11px; font-weight:800; color:#888; margin:20px 0 10px 0;">WIKI</div>
             <div id="sidebar-wiki-list"></div>
+            <button id="add-wiki-btn" class="nav-item" style="border:1px dashed #888; color:#888; text-align:center;">+ New Page</button>
             <div style="margin-top:auto; display:flex; gap:10px;">
                 <button id="theme-toggle" class="nav-item" style="text-align:center; background:var(--border);">🌙 Mode</button>
                 <button id="logout-btn" class="nav-item" style="text-align:center; background:var(--border);">🚪 Out</button>
@@ -90,13 +94,13 @@
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>📰 News Feed</h2><button onclick="fetchAP()">🔄</button></div>
-                <div id="news-container" class="news-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:20px;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>📰 News</h2><button onclick="fetchAP()">🔄 Re-Sync</button></div>
+                <div id="news-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:20px;"></div>
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2><button onclick="fetchFreebies()">🔄</button></div>
-                <div id="freebies-container" class="news-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:20px;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals</h2><button onclick="fetchFreebies()">🔄 Refresh</button></div>
+                <div id="freebies-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:20px;"></div>
             </div>
 
             <div id="wiki-content-view" class="view-pane">
@@ -112,6 +116,7 @@
         <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
             <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit;">
+            
             <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:15px 0;">
                 <label style="font-size:11px; font-weight:800; color:#888;">CATEGORY:</label>
                 <select id="modal-label-select" style="margin-left:10px; background:var(--sidebar); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:8px;">
@@ -122,6 +127,7 @@
                     <option value="urgent">🚨 Urgent</option>
                 </select>
             </div>
+
             <div style="margin:15px 0; display:flex; gap:10px;"><button id="task-mode-preview" class="btn btn-active">Preview</button><button id="task-mode-edit" class="btn">Edit</button></div>
             <textarea id="modal-notes" style="display:none; width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px;"></textarea>
             <div id="modal-preview"></div>
@@ -136,13 +142,24 @@
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, sortables = [];
 
-        // --- CORE NAVIGATION ---
+        // --- THEME ENGINE ---
+        const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
+        applyTheme(localStorage.getItem('theme') || 'light');
+        document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+
         const showView = (vid) => {
             document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none');
             const target = document.getElementById(vid); if(target) target.style.display = 'flex';
             if(vid === 'news-view') fetchAP(); if(vid === 'freebies-view') fetchFreebies();
         };
 
+        // --- GLOBAL SEARCH (Cmd+K) ---
+        window.onkeydown = (e) => {
+            if((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-palette').style.display='flex'; document.getElementById('search-input').focus(); }
+            if(e.key === 'Escape') document.getElementById('search-palette').style.display='none';
+        };
+
+        // --- HARD-LOCKED EVENT DELEGATION ---
         document.addEventListener('click', (e) => {
             const nav = e.target.closest('[data-view]'); if(nav) showView(nav.getAttribute('data-view'));
             const card = e.target.closest('.card'); if(card) {
@@ -155,23 +172,6 @@
             }
         });
 
-        // --- SEARCH ENGINE ---
-        window.onkeydown = (e) => {
-            if((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-palette').style.display='flex'; document.getElementById('search-input').focus(); }
-            if(e.key === 'Escape') document.getElementById('search-palette').style.display='none';
-        };
-
-        document.getElementById('search-input').oninput = (e) => {
-            const q = e.target.value.toLowerCase(); const res = document.getElementById('search-results'); res.innerHTML = ''; if(!q) return;
-            [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',d:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',d:w.data()}))].forEach(i => {
-                if(i.t.toLowerCase().includes(q)) {
-                    const div = document.createElement('div'); div.className = 'search-item'; div.innerHTML = `<span>${i.t}</span><small>${i.type}</small>`;
-                    div.onclick = () => { document.getElementById('search-palette').style.display='none'; if(i.type==='TASK') openTask(i.id,i.d); else openWiki(i.id,i.d); };
-                    res.appendChild(div);
-                }
-            });
-        };
-
         // --- AUTH & DATA ---
         onAuthStateChanged(auth, async (u) => {
             if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='flex';
@@ -179,8 +179,6 @@
         });
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
-        document.getElementById('theme-toggle').onclick = () => { const dark = !document.body.classList.contains('dark-mode'); document.body.classList.toggle('dark-mode', dark); localStorage.setItem('theme', dark ? 'dark' : 'light'); };
-        if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
 
         onSnapshot(collection(db, "tasks"), (s) => {
             allTasks = s.docs; if(isEditing) return;
@@ -206,36 +204,54 @@
             });
         });
 
-        // --- WIDGET ENGINES ---
-        window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing...</p>';
-            try {
-                const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`);
-                const j = await r.json(); const xml = new DOMParser().parseFromString(j.contents, "text/xml"); c.innerHTML = '';
-                Array.from(xml.querySelectorAll("item")).slice(0,10).forEach(i => {
-                    const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<b>${i.querySelector("title").textContent}</b>`;
-                    card.onclick = () => window.open(i.querySelector("link").textContent, '_blank'); c.appendChild(card);
-                });
-            } catch(e) { c.innerHTML = '<p>AP Jammed.</p>'; }
-        };
-        window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing...</p>';
-            try {
-                const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=10')}`);
-                const j = await r.json(); const items = JSON.parse(j.contents).data.children; c.innerHTML = '';
-                items.forEach(i => {
-                    const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<b>${i.data.title}</b>`;
-                    card.onclick = () => window.open(`https://reddit.com${i.data.permalink}`, '_blank'); c.appendChild(card);
-                });
-            } catch(e) { c.innerHTML = '<p>Deals Jammed.</p>'; }
+        // --- WIDGET ENGINES (DUAL PROXY) ---
+        const multiFetch = async (url) => {
+            const proxies = [`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}`];
+            for(let p of proxies) {
+                try {
+                    const res = await fetch(`${p}&cb=${Date.now()}`, { signal: AbortSignal.timeout(5000) });
+                    if(res.ok) { const raw = await res.json(); return raw.contents || raw; }
+                } catch(e) { continue; }
+            }
+            return null;
         };
 
-        // --- EDITOR ACTIONS ---
+        window.fetchAP = async () => {
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing AP...</p>';
+            const data = await multiFetch('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en');
+            if(!data) { c.innerHTML = '<p>AP Jammed.</p>'; return; }
+            const xml = new DOMParser().parseFromString(data, "text/xml"); c.innerHTML = '';
+            Array.from(xml.querySelectorAll("item")).slice(0,10).forEach(i => {
+                const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.querySelector("title").textContent}</b>`;
+                div.onclick = () => window.open(i.querySelector("link").textContent, '_blank'); c.appendChild(div);
+            });
+        };
+
+        window.fetchFreebies = async () => {
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing Deals...</p>';
+            const data = await multiFetch('https://www.reddit.com/r/freebies.json?limit=10');
+            if(!data) { c.innerHTML = '<p>Deals Jammed.</p>'; return; }
+            const items = typeof data === 'string' ? JSON.parse(data).data.children : data.data.children; c.innerHTML = '';
+            items.forEach(i => {
+                const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.data.title}</b>`;
+                div.onclick = () => window.open(`https://reddit.com${i.data.permalink}`, '_blank'); c.appendChild(div);
+            });
+        };
+
+        // --- ACTIONS ---
         const openTask = (id, data) => { curTaskId = id; isEditing = true; document.getElementById('modal-title-display').value = data.text; document.getElementById('modal-label-select').value = data.label || 'none'; document.getElementById('modal-notes').value = data.notes || ''; document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display='flex'; };
         const openWiki = (id, data) => { curWikiId = id; isEditing = false; document.getElementById('wiki-title-display').value = data.title; document.getElementById('wiki-notes').value = data.content || ''; document.getElementById('wiki-mode-preview').click(); showView('wiki-content-view'); };
-        
+
         document.getElementById('modal-notes').oninput = async () => { if(curTaskId && isEditing) await updateDoc(doc(db, 'tasks', curTaskId), { notes: document.getElementById('modal-notes').value }); };
-        document.getElementById('modal-label-select').onchange = async () => { if(curTaskId && isEditing) await updateDoc(doc(db, 'tasks', curTaskId), { label: document.getElementById('modal-label-select').value }); };
+        document.getElementById('modal-label-select').onchange = async (e) => { 
+            if(curTaskId && isEditing) { 
+                await updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value });
+                // Force local badge update
+                const card = document.querySelector(`.card[data-id="${curTaskId}"] .badge`);
+                if(card) { card.className = `badge badge-${e.target.value}`; card.innerText = e.target.value; }
+            }
+        };
+
         document.getElementById('task-mode-preview').onclick = () => { isEditing = false; document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value); };
         document.getElementById('task-mode-edit').onclick = () => { isEditing = true; document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
