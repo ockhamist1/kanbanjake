@@ -112,12 +112,12 @@
             </div>
             
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Re-Sync</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button></div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
             
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2><button onclick="fetchFreebies()" class="btn">🔄 Refresh</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2><button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button></div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
@@ -171,7 +171,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwu5RAU-OOlPyUF7O5YYw06upX_V7yl_uDpBiZea342_smkuJUkCKFKBgGJaVLGb4i_rw/exec"; 
@@ -179,6 +179,82 @@
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, userReadList = [];
+
+        // --- HOISTED FETCH FUNCTIONS ---
+        async function fetchAP() {
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Establishing secure connection...</p>';
+            try {
+                const r = await fetch(`${WEB_APP_URL}?feed=ap`);
+                const rawXml = await r.text();
+                if(rawXml.includes("Fetch error:") || rawXml.includes("<html")) throw new Error("Proxy Auth Error");
+                
+                const xml = new DOMParser().parseFromString(rawXml, "text/xml"); 
+                const items = Array.from(xml.querySelectorAll("item"));
+                if(items.length === 0) throw new Error("No items");
+                
+                c.innerHTML = '';
+                items.slice(0,12).forEach(i => {
+                    const link = i.querySelector("link").textContent; const isRead = userReadList.includes(link);
+                    const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                    div.setAttribute('data-link', link);
+                    div.innerHTML = `<div><b>${i.querySelector("title").textContent}</b></div>
+                                     <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
+                    div.onclick = (e) => { if(e.target.type !== 'checkbox') window.open(link, '_blank'); };
+                    div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
+                    c.appendChild(div);
+                });
+            } catch(e) { 
+                try {
+                    const r2 = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`);
+                    const data = await r2.json();
+                    if(!data.items) throw new Error();
+                    c.innerHTML = '';
+                    data.items.slice(0,12).forEach(i => {
+                        const link = i.link; const isRead = userReadList.includes(link);
+                        const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                        div.setAttribute('data-link', link);
+                        div.innerHTML = `<div><b>${i.title}</b></div>
+                                         <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
+                        div.onclick = (ev) => { if(ev.target.type !== 'checkbox') window.open(link, '_blank'); };
+                        div.querySelector('input').onchange = (ev) => toggleRead(link, ev.target.checked, div);
+                        c.appendChild(div);
+                    });
+                } catch(e2) { c.innerHTML = '<p style="color:red">AP Signal Blocked.</p>'; }
+            }
+        }
+
+        async function fetchFreebies() {
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Establishing secure connection...</p>';
+            let items = [];
+            try {
+                const r = await fetch(`${WEB_APP_URL}?feed=deals`);
+                const rawText = await r.text();
+                if(rawText.includes("Fetch error:") || rawText.includes("<html")) throw new Error("Proxy Auth Error");
+                items = JSON.parse(rawText).data.children;
+            } catch(e) {
+                try {
+                    const fallback = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=12')}`);
+                    items = JSON.parse(await fallback.text()).data.children;
+                } catch (fallbackErr) { c.innerHTML = '<p style="color:red">Reddit Signal Blocked.</p>'; return; }
+            }
+            if(!items || items.length === 0) { c.innerHTML = '<p style="color:red">No deals found.</p>'; return; }
+            
+            c.innerHTML = '';
+            items.forEach(i => {
+                const p = i.data; const link = `https://reddit.com${p.permalink}`; const isRead = userReadList.includes(link);
+                const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                div.setAttribute('data-link', link);
+                div.innerHTML = `<div><b>${p.title}</b></div>
+                                 <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
+                div.onclick = (e) => { if(e.target.type !== 'checkbox') window.open(link, '_blank'); };
+                div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
+                c.appendChild(div);
+            });
+        }
+
+        // Attach to window so HTML buttons can click them
+        window.fetchAP = fetchAP;
+        window.fetchFreebies = fetchFreebies;
 
         // --- THEME ---
         const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
@@ -207,18 +283,42 @@
 
         // --- TRIAGE FUNCTION ---
         async function toggleRead(link, read, card) {
-            if (read) { if(!userReadList.includes(link)) userReadList.push(link); card.classList.add('read'); }
-            else { userReadList = userReadList.filter(l => l !== link); card.classList.remove('read'); }
+            if (read) { if(!userReadList.includes(link)) userReadList.push(link); }
+            else { userReadList = userReadList.filter(l => l !== link); }
             if(auth.currentUser) await setDoc(doc(db, 'users', auth.currentUser.uid), { readArticles: userReadList }, { merge: true });
         }
 
-        // --- FIREBASE INIT ---
+        // --- FIREBASE INIT WITH LIVE PROFILE SYNC ---
+        let profileUnsubscribe = null;
         onAuthStateChanged(auth, async (u) => {
-            if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='block';
-                const ud = await getDoc(doc(db, 'users', u.uid)); userReadList = ud.exists() ? ud.data().readArticles || [] : [];
-                fetchAP(); fetchFreebies();
+            if(u) { 
+                document.getElementById('login-screen').style.display='none'; 
+                document.getElementById('app-container').style.display='block';
+                
+                // Live listener for Read Articles (syncs across devices)
+                if(profileUnsubscribe) profileUnsubscribe();
+                profileUnsubscribe = onSnapshot(doc(db, 'users', u.uid), (d) => {
+                    userReadList = d.exists() ? d.data().readArticles || [] : [];
+                    
+                    // Visually update the UI live if cards are already rendered
+                    document.querySelectorAll('.news-card').forEach(card => {
+                        const link = card.getAttribute('data-link');
+                        const cb = card.querySelector('input[type="checkbox"]');
+                        if(link && userReadList.includes(link)) {
+                            card.classList.add('read');
+                            if(cb) cb.checked = true;
+                        } else {
+                            card.classList.remove('read');
+                            if(cb) cb.checked = false;
+                        }
+                    });
+                });
+
+                fetchAP(); 
+                fetchFreebies();
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
+        
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 
         onSnapshot(collection(db, "tasks"), (s) => {
@@ -242,90 +342,13 @@
             const mList = document.getElementById('mobile-wiki-list'); mList.innerHTML = '';
             
             s.docs.forEach(d => {
-                // Sidebar item
                 const btn = document.createElement('button'); btn.className = 'nav-item wiki-nav-btn'; btn.innerText = `📄 ${d.data().title}`; btn.setAttribute('data-id', d.id);
                 btn.onclick = () => openWiki(d.id, d.data()); sList.appendChild(btn);
                 
-                // Mobile List item
                 const mCard = document.createElement('div'); mCard.className = 'card'; mCard.innerHTML = `<div style="font-weight:700;">📄 ${d.data().title}</div>`; mCard.setAttribute('data-id', d.id);
                 mCard.onclick = () => openWiki(d.id, d.data()); mList.appendChild(mCard);
             });
         });
-
-        // --- BOMB-PROOF WIDGETS ---
-        window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Establishing secure connection...</p>';
-            try {
-                const r = await fetch(`${WEB_APP_URL}?feed=ap`);
-                const rawXml = await r.text();
-                if(rawXml.includes("Fetch error:") || rawXml.includes("<html")) throw new Error("Proxy Auth Error");
-                
-                const xml = new DOMParser().parseFromString(rawXml, "text/xml"); 
-                const items = Array.from(xml.querySelectorAll("item"));
-                if(items.length === 0) throw new Error("No items");
-                
-                c.innerHTML = '';
-                items.slice(0,12).forEach(i => {
-                    const link = i.querySelector("link").textContent; const isRead = userReadList.includes(link);
-                    const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
-                    div.innerHTML = `<div><b>${i.querySelector("title").textContent}</b></div>
-                                     <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
-                    div.onclick = (e) => { if(e.target.type !== 'checkbox') window.open(link, '_blank'); };
-                    div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
-                    c.appendChild(div);
-                });
-            } catch(e) { 
-                // Fallback to RSS2JSON
-                try {
-                    const r2 = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`);
-                    const data = await r2.json();
-                    if(!data.items) throw new Error();
-                    c.innerHTML = '';
-                    data.items.slice(0,12).forEach(i => {
-                        const link = i.link; const isRead = userReadList.includes(link);
-                        const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
-                        div.innerHTML = `<div><b>${i.title}</b></div>
-                                         <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
-                        div.onclick = (ev) => { if(ev.target.type !== 'checkbox') window.open(link, '_blank'); };
-                        div.querySelector('input').onchange = (ev) => toggleRead(link, ev.target.checked, div);
-                        c.appendChild(div);
-                    });
-                } catch(e2) {
-                    c.innerHTML = '<p style="color:red">AP Signal Blocked. Proxy requires authorization.</p>'; 
-                }
-            }
-        };
-
-        window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Establishing secure connection...</p>';
-            let items = [];
-            try {
-                const r = await fetch(`${WEB_APP_URL}?feed=deals`);
-                const rawText = await r.text();
-                if(rawText.includes("Fetch error:") || rawText.includes("<html")) throw new Error("Proxy Auth Error");
-                items = JSON.parse(rawText).data.children;
-            } catch(e) {
-                try {
-                    const fallback = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=12')}`);
-                    items = JSON.parse(await fallback.text()).data.children;
-                } catch (fallbackErr) {
-                    c.innerHTML = '<p style="color:red">Reddit Signal Blocked. Proxy requires authorization.</p>';
-                    return;
-                }
-            }
-            if(!items || items.length === 0) { c.innerHTML = '<p style="color:red">No deals found.</p>'; return; }
-            
-            c.innerHTML = '';
-            items.forEach(i => {
-                const p = i.data; const link = `https://reddit.com${p.permalink}`; const isRead = userReadList.includes(link);
-                const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
-                div.innerHTML = `<div><b>${p.title}</b></div>
-                                 <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
-                div.onclick = (e) => { if(e.target.type !== 'checkbox') window.open(link, '_blank'); };
-                div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
-                c.appendChild(div);
-            });
-        };
 
         // --- ACTIONS & NAVIGATION ---
         window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
