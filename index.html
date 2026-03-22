@@ -50,18 +50,20 @@
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
 
-        /* Mobile Specific Elements */
-        #mobile-header { display: none; padding: 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); z-index: 1000; }
+        /* Mobile Specifics */
+        .mobile-only { display: none; }
+        #mobile-header { display: none; padding: 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); z-index: 1000; position: relative; }
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
-        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 12px; font-weight: 700; opacity: 0.5; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 11px; font-weight: 700; opacity: 0.5; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .switch-btn.active { opacity: 1; color: var(--accent); }
 
         @media (max-width: 768px) { 
             #sidebar { display: none; } 
+            .mobile-only { display: block; }
             #mobile-header { display: block; }
             #mobile-switcher { display: flex; } 
             #main-content { padding-bottom: 70px; } 
-            .column { min-width: 85vw !important; } /* Better mobile swiping for Kanban */
+            .column { min-width: 85vw !important; } 
         }
     </style>
 </head>
@@ -77,7 +79,7 @@
 
     <div id="mobile-header">
         <input type="text" id="mobile-search" placeholder="Search Workspace..." style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none; box-sizing:border-box;">
-        <div id="mobile-search-results" style="margin-top:10px; display:none; flex-direction:column; gap:5px; max-height:200px; overflow-y:auto; position:absolute; background:var(--card-bg); width:calc(100% - 30px); z-index:3000; box-shadow:0 10px 20px rgba(0,0,0,0.2); border-radius:8px; border:1px solid var(--border); padding:5px;"></div>
+        <div id="mobile-search-results" style="margin-top:5px; display:none; flex-direction:column; gap:5px; max-height:250px; overflow-y:auto; position:absolute; background:var(--card-bg); width:calc(100% - 30px); z-index:3000; box-shadow:0 10px 20px rgba(0,0,0,0.4); border-radius:8px; border:1px solid var(--border); padding:5px;"></div>
     </div>
 
     <div id="app-layout">
@@ -108,15 +110,24 @@
                     <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" style="min-height:50vh;"></div></div>
                 </div>
             </div>
+            
             <div id="news-view" class="view-pane">
                 <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Re-Sync</button></div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
+            
             <div id="freebies-view" class="view-pane">
                 <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2><button onclick="fetchFreebies()" class="btn">🔄 Refresh</button></div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
+
+            <div id="wiki-list-view" class="view-pane">
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>Wiki Library</h2><button id="mobile-add-wiki-btn" class="btn">+</button></div>
+                <div id="mobile-wiki-list" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;"></div>
+            </div>
+
             <div id="wiki-content-view" class="view-pane">
+                <button class="btn mobile-only" onclick="showView('wiki-list-view')" style="margin-bottom:15px; width:fit-content;">⬅ Back to List</button>
                 <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;">
                 <div style="display:flex; gap:10px; margin-bottom:20px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button></div>
                 <textarea id="wiki-notes" style="display:none; width:100%; height:60vh; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
@@ -129,7 +140,7 @@
         <button class="switch-btn active" data-view="kanban-view"><span style="font-size:18px;">📊</span>BOARD</button>
         <button class="switch-btn" data-view="news-view"><span style="font-size:18px;">📰</span>AP NEWS</button>
         <button class="switch-btn" data-view="freebies-view"><span style="font-size:18px;">🎁</span>DEALS</button>
-        <button class="switch-btn" data-view="wiki-content-view"><span style="font-size:18px;">📄</span>WIKI</button>
+        <button class="switch-btn" data-view="wiki-list-view"><span style="font-size:18px;">📄</span>WIKI</button>
     </div>
 
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
@@ -194,14 +205,14 @@
         document.getElementById('sidebar-search').oninput = handleSearch;
         document.getElementById('mobile-search').oninput = handleSearch;
 
-        // --- TRIAGE (MARK READ) ---
+        // --- TRIAGE FUNCTION ---
         async function toggleRead(link, read, card) {
             if (read) { if(!userReadList.includes(link)) userReadList.push(link); card.classList.add('read'); }
             else { userReadList = userReadList.filter(l => l !== link); card.classList.remove('read'); }
             if(auth.currentUser) await setDoc(doc(db, 'users', auth.currentUser.uid), { readArticles: userReadList }, { merge: true });
         }
 
-        // --- DATA SNAPS ---
+        // --- FIREBASE INIT ---
         onAuthStateChanged(auth, async (u) => {
             if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='block';
                 const ud = await getDoc(doc(db, 'users', u.uid)); userReadList = ud.exists() ? ud.data().readArticles || [] : [];
@@ -226,21 +237,35 @@
         });
 
         onSnapshot(collection(db, "wiki"), (s) => {
-            allWiki = s.docs; const list = document.getElementById('sidebar-wiki-list'); list.innerHTML = '';
+            allWiki = s.docs; 
+            const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
+            const mList = document.getElementById('mobile-wiki-list'); mList.innerHTML = '';
+            
             s.docs.forEach(d => {
+                // Sidebar item
                 const btn = document.createElement('button'); btn.className = 'nav-item wiki-nav-btn'; btn.innerText = `📄 ${d.data().title}`; btn.setAttribute('data-id', d.id);
-                btn.onclick = () => openWiki(d.id, d.data()); list.appendChild(btn);
+                btn.onclick = () => openWiki(d.id, d.data()); sList.appendChild(btn);
+                
+                // Mobile List item
+                const mCard = document.createElement('div'); mCard.className = 'card'; mCard.innerHTML = `<div style="font-weight:700;">📄 ${d.data().title}</div>`; mCard.setAttribute('data-id', d.id);
+                mCard.onclick = () => openWiki(d.id, d.data()); mList.appendChild(mCard);
             });
         });
 
-        // --- WIDGETS ---
+        // --- BOMB-PROOF WIDGETS ---
         window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Establishing secure connection to Apps Script...</p>';
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Establishing secure connection...</p>';
             try {
                 const r = await fetch(`${WEB_APP_URL}?feed=ap`);
                 const rawXml = await r.text();
-                const xml = new DOMParser().parseFromString(rawXml, "text/xml"); c.innerHTML = '';
-                Array.from(xml.querySelectorAll("item")).slice(0,12).forEach(i => {
+                if(rawXml.includes("Fetch error:") || rawXml.includes("<html")) throw new Error("Proxy Auth Error");
+                
+                const xml = new DOMParser().parseFromString(rawXml, "text/xml"); 
+                const items = Array.from(xml.querySelectorAll("item"));
+                if(items.length === 0) throw new Error("No items");
+                
+                c.innerHTML = '';
+                items.slice(0,12).forEach(i => {
                     const link = i.querySelector("link").textContent; const isRead = userReadList.includes(link);
                     const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
                     div.innerHTML = `<div><b>${i.querySelector("title").textContent}</b></div>
@@ -249,25 +274,47 @@
                     div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
                     c.appendChild(div);
                 });
-            } catch(e) { c.innerHTML = '<p style="color:red">Proxy Error: Could not reach Apps Script.</p>'; }
+            } catch(e) { 
+                // Fallback to RSS2JSON
+                try {
+                    const r2 = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`);
+                    const data = await r2.json();
+                    if(!data.items) throw new Error();
+                    c.innerHTML = '';
+                    data.items.slice(0,12).forEach(i => {
+                        const link = i.link; const isRead = userReadList.includes(link);
+                        const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                        div.innerHTML = `<div><b>${i.title}</b></div>
+                                         <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
+                        div.onclick = (ev) => { if(ev.target.type !== 'checkbox') window.open(link, '_blank'); };
+                        div.querySelector('input').onchange = (ev) => toggleRead(link, ev.target.checked, div);
+                        c.appendChild(div);
+                    });
+                } catch(e2) {
+                    c.innerHTML = '<p style="color:red">AP Signal Blocked. Proxy requires authorization.</p>'; 
+                }
+            }
         };
 
         window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Establishing secure connection to Apps Script...</p>';
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Establishing secure connection...</p>';
             let items = [];
             try {
                 const r = await fetch(`${WEB_APP_URL}?feed=deals`);
                 const rawText = await r.text();
+                if(rawText.includes("Fetch error:") || rawText.includes("<html")) throw new Error("Proxy Auth Error");
                 items = JSON.parse(rawText).data.children;
             } catch(e) {
                 try {
-                    const fallback = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=12')}`);
+                    const fallback = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=12')}`);
                     items = JSON.parse(await fallback.text()).data.children;
                 } catch (fallbackErr) {
-                    c.innerHTML = '<p style="color:red">Proxy Error: Reddit Signal Blocked on all nodes.</p>';
+                    c.innerHTML = '<p style="color:red">Reddit Signal Blocked. Proxy requires authorization.</p>';
                     return;
                 }
             }
+            if(!items || items.length === 0) { c.innerHTML = '<p style="color:red">No deals found.</p>'; return; }
+            
             c.innerHTML = '';
             items.forEach(i => {
                 const p = i.data; const link = `https://reddit.com${p.permalink}`; const isRead = userReadList.includes(link);
@@ -281,7 +328,7 @@
         };
 
         // --- ACTIONS & NAVIGATION ---
-        const showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
+        window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
         const openTask = (id, data) => { 
             curTaskId = id; isEditing = true; 
             document.getElementById('modal-title-display').value = data.text; 
@@ -333,6 +380,7 @@
         
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
         document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
+        document.getElementById('mobile-add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
         document.getElementById('logout-btn').onclick = () => signOut(auth);
         
