@@ -62,7 +62,7 @@
     <div id="app-container" style="display:none; width: 100%; height: 100vh;">
         <div id="sidebar">
             <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
-                <input type="text" id="sidebar-search" placeholder="Search Workspace..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none;">
+                <input type="text" id="sidebar-search" placeholder="Search Workspace..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none; box-sizing:border-box;">
                 <div id="sidebar-search-results" style="margin-top:10px; display:none; flex-direction:column; gap:5px; max-height:200px; overflow-y:auto;"></div>
             </div>
 
@@ -96,15 +96,15 @@
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
             <div id="wiki-content-view" class="view-pane">
-                <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px;">
+                <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;">
                 <div style="display:flex; gap:10px; margin-bottom:20px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button></div>
-                <textarea id="wiki-notes" style="display:none; width:100%; height:60vh; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px;"></textarea>
-                <div id="wiki-preview" style="line-height:1.7;"></div>
+                <textarea id="wiki-notes" style="display:none; width:100%; height:60vh; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
+                <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
             </div>
         </div>
     </div>
 
-    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
         <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
             <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit; outline:none;">
@@ -134,6 +134,11 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        
+        // --- PRIVATE PROXY URL HARD-WIRED ---
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwu5RAU-OOlPyUF7O5YYw06upX_V7yl_uDpBiZea342_smkuJUkCKFKBgGJaVLGb4i_rw/exec"; 
+        // ------------------------------------
+
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false;
@@ -143,17 +148,14 @@
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- NEW VISIBLE SEARCH ---
+        // --- SEARCH BAR ---
         document.getElementById('sidebar-search').oninput = (e) => {
-            const q = e.target.value.toLowerCase(); 
-            const res = document.getElementById('sidebar-search-results'); 
-            res.innerHTML = ''; 
+            const q = e.target.value.toLowerCase(); const res = document.getElementById('sidebar-search-results'); res.innerHTML = ''; 
             if(!q) { res.style.display = 'none'; return; }
             res.style.display = 'flex';
             [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',d:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',d:w.data()}))].forEach(i => {
                 if(i.t.toLowerCase().includes(q)) {
-                    const div = document.createElement('div'); 
-                    div.style = "padding:8px; background:var(--bg); border-radius:4px; font-size:12px; cursor:pointer;";
+                    const div = document.createElement('div'); div.style = "padding:8px; background:var(--bg); border-radius:4px; font-size:12px; cursor:pointer;";
                     div.innerHTML = `<b>${i.t}</b> <span style="font-size:10px; color:#888; float:right;">${i.type}</span>`;
                     div.onclick = () => { res.style.display='none'; document.getElementById('sidebar-search').value=''; if(i.type==='TASK') openTask(i.id,i.d); else openWiki(i.id,i.d); };
                     res.appendChild(div);
@@ -161,7 +163,7 @@
             });
         };
 
-        // --- FIREBASE OPS ---
+        // --- FIREBASE INIT ---
         onAuthStateChanged(auth, async (u) => {
             if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='flex';
                 fetchAP(); fetchFreebies();
@@ -192,46 +194,35 @@
             });
         });
 
-        // --- WIDGETS (RAW TEXT TUNNEL) ---
-        const multiFetchRaw = async (url) => {
-            const proxies = [
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-                `https://corsproxy.io/?${encodeURIComponent(url)}`
-            ];
-            for(let p of proxies) {
-                try { const r = await fetch(p); if(r.ok) return await r.text(); } catch(e) { continue; }
-            }
-            return null;
-        };
-
+        // --- PRIVATE PROXY WIDGETS ---
         window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing AP...</p>';
-            const rawXml = await multiFetchRaw('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en');
-            if(!rawXml) { c.innerHTML = '<p>AP Jammed.</p>'; return; }
-            const xml = new DOMParser().parseFromString(rawXml, "text/xml"); c.innerHTML = '';
-            Array.from(xml.querySelectorAll("item")).slice(0,12).forEach(i => {
-                const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.querySelector("title").textContent}</b>`;
-                div.onclick = () => window.open(i.querySelector("link").textContent, '_blank'); c.appendChild(div);
-            });
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Establishing secure connection to Apps Script...</p>';
+            try {
+                const r = await fetch(`${WEB_APP_URL}?feed=ap`);
+                const rawXml = await r.text();
+                const xml = new DOMParser().parseFromString(rawXml, "text/xml"); c.innerHTML = '';
+                Array.from(xml.querySelectorAll("item")).slice(0,12).forEach(i => {
+                    const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.querySelector("title").textContent}</b>`;
+                    div.onclick = () => window.open(i.querySelector("link").textContent, '_blank'); c.appendChild(div);
+                });
+            } catch(e) { c.innerHTML = '<p style="color:red">Proxy Error: Could not reach Apps Script.</p>'; }
         };
 
         window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing Deals...</p>';
-            const rawJson = await multiFetchRaw('https://www.reddit.com/r/freebies.json?limit=12');
-            if(!rawJson) { c.innerHTML = '<p>Deals Jammed.</p>'; return; }
-            const items = JSON.parse(rawJson).data.children; c.innerHTML = '';
-            items.forEach(i => {
-                const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.data.title}</b>`;
-                div.onclick = () => window.open(`https://reddit.com${i.data.permalink}`, '_blank'); c.appendChild(div);
-            });
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Establishing secure connection to Apps Script...</p>';
+            try {
+                const r = await fetch(`${WEB_APP_URL}?feed=deals`);
+                const rawJson = await r.json();
+                const items = rawJson.data.children; c.innerHTML = '';
+                items.forEach(i => {
+                    const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.data.title}</b>`;
+                    div.onclick = () => window.open(`https://reddit.com${i.data.permalink}`, '_blank'); c.appendChild(div);
+                });
+            } catch(e) { c.innerHTML = '<p style="color:red">Proxy Error: Could not reach Apps Script.</p>'; }
         };
 
         // --- ACTIONS & NAVIGATION ---
-        const showView = (vid) => { 
-            document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); 
-            document.getElementById(vid).style.display = 'flex'; 
-        };
+        const showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
         const openTask = (id, data) => { 
             curTaskId = id; isEditing = true; 
             document.getElementById('modal-title-display').value = data.text; 
@@ -258,19 +249,27 @@
         
         document.getElementById('modal-notes').oninput = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
         document.getElementById('modal-title-display').oninput = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { text: e.target.value }); };
+        document.getElementById('wiki-title-display').oninput = async (e) => { if(curWikiId) await updateDoc(doc(db, 'wiki', curWikiId), { title: e.target.value }); };
+        document.getElementById('wiki-notes').oninput = async (e) => { if(curWikiId) await updateDoc(doc(db, 'wiki', curWikiId), { content: e.target.value }); };
         
         document.getElementById('task-mode-preview').onclick = () => { 
-            document.getElementById('modal-notes').style.display='none'; 
-            document.getElementById('modal-preview').style.display='block'; 
+            document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; 
             document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value || 'No notes yet.'); 
-            document.getElementById('task-mode-preview').classList.add('btn-active');
-            document.getElementById('task-mode-edit').classList.remove('btn-active');
+            document.getElementById('task-mode-preview').classList.add('btn-active'); document.getElementById('task-mode-edit').classList.remove('btn-active');
         };
         document.getElementById('task-mode-edit').onclick = () => { 
-            document.getElementById('modal-notes').style.display='block'; 
-            document.getElementById('modal-preview').style.display='none'; 
-            document.getElementById('task-mode-edit').classList.add('btn-active');
-            document.getElementById('task-mode-preview').classList.remove('btn-active');
+            document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; 
+            document.getElementById('task-mode-edit').classList.add('btn-active'); document.getElementById('task-mode-preview').classList.remove('btn-active');
+        };
+
+        document.getElementById('wiki-mode-preview').onclick = () => { 
+            document.getElementById('wiki-notes').style.display='none'; document.getElementById('wiki-preview').style.display='block'; 
+            document.getElementById('wiki-preview').innerHTML = marked.parse(document.getElementById('wiki-notes').value || 'No notes yet.'); 
+            document.getElementById('wiki-mode-preview').classList.add('btn-active'); document.getElementById('wiki-mode-edit').classList.remove('btn-active');
+        };
+        document.getElementById('wiki-mode-edit').onclick = () => { 
+            document.getElementById('wiki-notes').style.display='block'; document.getElementById('wiki-preview').style.display='none'; 
+            document.getElementById('wiki-mode-edit').classList.add('btn-active'); document.getElementById('wiki-mode-preview').classList.remove('btn-active');
         };
         
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
@@ -280,8 +279,7 @@
         
         document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => { 
             document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
-            b.classList.add('active'); 
-            showView(b.getAttribute('data-view')); 
+            b.classList.add('active'); showView(b.getAttribute('data-view')); 
         });
     </script>
 </body>
