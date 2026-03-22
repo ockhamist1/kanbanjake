@@ -4,34 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jake's Workspace</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
     <style>
         :root { 
             --bg: #f7f7f5; --text: #37352f; --sidebar: #ebebec; --border: #e0e0e0; 
             --card-bg: #ffffff; --accent: #4338ca; --nav-hover: rgba(0,0,0,0.05);
-            --m-bg: #1e40af; --s-bg: #854d0e; --c-bg: #166534; --u-bg: #991b1b;
+            --m-bg: #dbeafe; --m-txt: #1e40af; --s-bg: #fef9c3; --s-txt: #854d0e;
+            --c-bg: #dcfce7; --c-txt: #166534; --u-bg: #fee2e2; --u-txt: #991b1b;
         }
         [data-theme="dark"] { 
             --bg: #121212; --text: #e0e0e0; --sidebar: #1e1e1e; --border: #333; 
             --card-bg: #1e1e1e; --accent: #818cf8; --nav-hover: rgba(255,255,255,0.05);
-            --m-bg: #3b82f6; --s-bg: #eab308; --c-bg: #22c55e; --u-bg: #ef4444;
+            --m-bg: #1e3a8a; --m-txt: #dbeafe; --s-bg: #713f12; --s-txt: #fef9c3;
+            --c-bg: #064e3b; --c-txt: #dcfce7; --u-bg: #7f1d1d; --u-txt: #fee2e2;
         }
+
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; }
         
-        /* --- SEARCH PALETTE (Cmd+K) --- */
-        #search-palette { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 1000000; display: none; justify-content: center; padding-top: 100px; }
-        .search-box { background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 30px 60px rgba(0,0,0,0.5); overflow: hidden; }
-        #search-input { width: 100%; padding: 20px; font-size: 18px; border: none; background: transparent; color: var(--text); outline: none; border-bottom: 1px solid var(--border); }
-        .search-item { padding: 15px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin: 5px; color: var(--text); }
-        .search-item:hover { background: var(--nav-hover); }
+        #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; opacity: 0; z-index: 9999; pointer-events: none; }
+        #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-        /* --- CATEGORY BADGES --- */
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; color: white !important; }
-        .badge-mortgage { background: var(--m-bg); }
-        .badge-sunday-school { background: var(--s-bg); }
-        .badge-church { background: var(--c-bg); }
-        .badge-urgent { background: var(--u-bg); }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+        .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
+        .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
+        .badge-church { background: var(--c-bg); color: var(--c-txt); }
+        .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
 
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
@@ -39,20 +40,17 @@
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; }
-        .news-card.read { opacity: 0.4; filter: grayscale(1); }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
+        .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
 
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } }
     </style>
 </head>
 <body data-theme="dark">
-    <div id="search-palette">
-        <div class="search-box">
-            <input type="text" id="search-input" placeholder="Search Tasks, Lessons, Wiki..." autocomplete="off">
-            <div id="search-results" style="max-height: 400px; overflow-y: auto;"></div>
-        </div>
-    </div>
+    <div id="sync-indicator"></div>
 
     <div id="login-screen" style="position:fixed; inset:0; background:var(--bg); display:flex; justify-content:center; align-items:center; z-index:999999;">
         <div style="background:var(--card-bg); padding:40px; border-radius:12px; border:1px solid var(--border); text-align:center;">
@@ -63,6 +61,11 @@
 
     <div id="app-container" style="display:none; width: 100%; height: 100vh;">
         <div id="sidebar">
+            <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
+                <input type="text" id="sidebar-search" placeholder="Search Workspace..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none;">
+                <div id="sidebar-search-results" style="margin-top:10px; display:none; flex-direction:column; gap:5px; max-height:200px; overflow-y:auto;"></div>
+            </div>
+
             <div style="font-size:11px; font-weight:800; color:#888; margin-bottom:10px;">WORKSPACE</div>
             <button class="nav-item active" data-view="kanban-view">📊 Board</button>
             <button class="nav-item" data-view="news-view">📰 News</button>
@@ -79,13 +82,19 @@
         <div id="main-content">
             <div id="kanban-view" class="view-pane" style="display: flex;">
                 <div style="display:flex; gap:20px; height: 100%;">
-                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" style="cursor:pointer;">+</button></div><div id="todo-list" style="min-height:50vh;"></div></div>
+                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" class="btn" style="padding:2px 8px;">+</button></div><div id="todo-list" style="min-height:50vh;"></div></div>
                     <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Doing</div><div id="doing-list" style="min-height:50vh;"></div></div>
                     <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" style="min-height:50vh;"></div></div>
                 </div>
             </div>
-            <div id="news-view" class="view-pane"><h2>AP News Feed</h2><div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px;"></div></div>
-            <div id="freebies-view" class="view-pane"><h2>🎁 Deals Feed</h2><div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px;"></div></div>
+            <div id="news-view" class="view-pane">
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Re-Sync</button></div>
+                <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
+            </div>
+            <div id="freebies-view" class="view-pane">
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2><button onclick="fetchFreebies()" class="btn">🔄 Refresh</button></div>
+                <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
+            </div>
             <div id="wiki-content-view" class="view-pane">
                 <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px;">
                 <div style="display:flex; gap:10px; margin-bottom:20px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button></div>
@@ -97,15 +106,27 @@
 
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
         <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
-            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
-            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit;">
+            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
+            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit; outline:none;">
+            
             <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:15px 0;">
                 <label style="font-size:11px; font-weight:800; color:#888;">CATEGORY:</label>
-                <select id="modal-label-select" style="margin-left:10px; background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:5px;">
-                    <option value="none">None</option><option value="mortgage">🏠 Mortgage</option><option value="sunday-school">📖 Sunday School</option><option value="church">⛪ Church</option><option value="urgent">🚨 Urgent</option>
+                <select id="modal-label-select" style="margin-left:10px; background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:5px; border-radius:4px; outline:none;">
+                    <option value="none">None</option>
+                    <option value="mortgage">🏠 Mortgage</option>
+                    <option value="sunday-school">📖 Sunday School</option>
+                    <option value="church">⛪ Church</option>
+                    <option value="urgent">🚨 Urgent</option>
                 </select>
             </div>
-            <textarea id="modal-notes" style="width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit;"></textarea>
+
+            <div style="margin:15px 0; display:flex; gap:10px;">
+                <button id="task-mode-preview" class="btn btn-active">Preview</button>
+                <button id="task-mode-edit" class="btn">Edit</button>
+            </div>
+            
+            <textarea id="modal-notes" style="display:none; width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
+            <div id="modal-preview" style="height:300px; overflow-y:auto; padding:15px; border:1px solid var(--border); border-radius:4px; line-height:1.6; display:block; box-sizing:border-box;"></div>
         </div>
     </div>
 
@@ -115,36 +136,38 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
-        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, userReadList = [];
+        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false;
 
-        // --- THEME ENGINE ---
+        // --- THEME ---
         const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- SEARCH ENGINE ---
-        window.onkeydown = (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-palette').style.display='flex'; document.getElementById('search-input').focus(); }
-            if (e.key === 'Escape') document.getElementById('search-palette').style.display='none';
-        };
-        document.getElementById('search-input').oninput = (e) => {
-            const q = e.target.value.toLowerCase(); const res = document.getElementById('search-results'); res.innerHTML = ''; if(!q) return;
+        // --- NEW VISIBLE SEARCH ---
+        document.getElementById('sidebar-search').oninput = (e) => {
+            const q = e.target.value.toLowerCase(); 
+            const res = document.getElementById('sidebar-search-results'); 
+            res.innerHTML = ''; 
+            if(!q) { res.style.display = 'none'; return; }
+            res.style.display = 'flex';
             [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',d:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',d:w.data()}))].forEach(i => {
                 if(i.t.toLowerCase().includes(q)) {
-                    const div = document.createElement('div'); div.className = 'search-item'; div.innerHTML = `<span>${i.t}</span><small style="opacity:0.6">${i.type}</small>`;
-                    div.onclick = () => { document.getElementById('search-palette').style.display='none'; if(i.type==='TASK') openTask(i.id,i.d); else openWiki(i.id,i.d); };
+                    const div = document.createElement('div'); 
+                    div.style = "padding:8px; background:var(--bg); border-radius:4px; font-size:12px; cursor:pointer;";
+                    div.innerHTML = `<b>${i.t}</b> <span style="font-size:10px; color:#888; float:right;">${i.type}</span>`;
+                    div.onclick = () => { res.style.display='none'; document.getElementById('sidebar-search').value=''; if(i.type==='TASK') openTask(i.id,i.d); else openWiki(i.id,i.d); };
                     res.appendChild(div);
                 }
             });
         };
 
-        // --- DATA SNAPS ---
+        // --- FIREBASE OPS ---
         onAuthStateChanged(auth, async (u) => {
             if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='flex';
-                const ud = await getDoc(doc(db, 'users', u.uid)); userReadList = ud.exists() ? ud.data().readArticles || [] : [];
                 fetchAP(); fetchFreebies();
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
+        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 
         onSnapshot(collection(db, "tasks"), (s) => {
             allTasks = s.docs; if(isEditing) return;
@@ -152,7 +175,7 @@
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
                 allTasks.filter(d => d.data().status === st).forEach(d => {
                     const t = d.data(); const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
-                    card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
+                    card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label ? t.label.replace('-',' ') : ''}</div><div>${t.text}</div>`;
                     card.onclick = () => openTask(d.id, t); list.appendChild(card);
                 });
             });
@@ -169,44 +192,97 @@
             });
         });
 
-        // --- WIDGETS ---
+        // --- WIDGETS (RAW TEXT TUNNEL) ---
+        const multiFetchRaw = async (url) => {
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                `https://corsproxy.io/?${encodeURIComponent(url)}`
+            ];
+            for(let p of proxies) {
+                try { const r = await fetch(p); if(r.ok) return await r.text(); } catch(e) { continue; }
+            }
+            return null;
+        };
+
         window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing...</p>';
-            try {
-                const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}`);
-                const j = await r.json(); const xml = new DOMParser().parseFromString(j.contents, "text/xml"); c.innerHTML = '';
-                Array.from(xml.querySelectorAll("item")).slice(0,12).forEach(i => {
-                    const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.querySelector("title").textContent}</b>`;
-                    div.onclick = () => window.open(i.querySelector("link").textContent, '_blank'); c.appendChild(div);
-                });
-            } catch(e) { c.innerHTML = '<p>AP Jammed.</p>'; }
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing AP...</p>';
+            const rawXml = await multiFetchRaw('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en');
+            if(!rawXml) { c.innerHTML = '<p>AP Jammed.</p>'; return; }
+            const xml = new DOMParser().parseFromString(rawXml, "text/xml"); c.innerHTML = '';
+            Array.from(xml.querySelectorAll("item")).slice(0,12).forEach(i => {
+                const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.querySelector("title").textContent}</b>`;
+                div.onclick = () => window.open(i.querySelector("link").textContent, '_blank'); c.appendChild(div);
+            });
         };
 
         window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing...</p>';
-            try {
-                const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=12')}`);
-                const j = await r.json(); const items = JSON.parse(j.contents).data.children; c.innerHTML = '';
-                items.forEach(i => {
-                    const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.data.title}</b>`;
-                    div.onclick = () => window.open(`https://reddit.com${i.data.permalink}`, '_blank'); c.appendChild(div);
-                });
-            } catch(e) { c.innerHTML = '<p>Deals Jammed.</p>'; }
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing Deals...</p>';
+            const rawJson = await multiFetchRaw('https://www.reddit.com/r/freebies.json?limit=12');
+            if(!rawJson) { c.innerHTML = '<p>Deals Jammed.</p>'; return; }
+            const items = JSON.parse(rawJson).data.children; c.innerHTML = '';
+            items.forEach(i => {
+                const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<b>${i.data.title}</b>`;
+                div.onclick = () => window.open(`https://reddit.com${i.data.permalink}`, '_blank'); c.appendChild(div);
+            });
         };
 
-        // --- ACTIONS ---
-        const showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
-        const openTask = (id, data) => { curTaskId = id; isEditing = true; document.getElementById('modal-title-display').value = data.text; document.getElementById('modal-label-select').value = data.label || 'none'; document.getElementById('modal-notes').value = data.notes || ''; document.getElementById('editor-modal').style.display='flex'; };
-        const openWiki = (id, data) => { curWikiId = id; isEditing = false; document.getElementById('wiki-title-display').value = data.title; document.getElementById('wiki-notes').value = data.content || ''; document.getElementById('wiki-preview').innerHTML = marked.parse(data.content || ''); showView('wiki-content-view'); };
+        // --- ACTIONS & NAVIGATION ---
+        const showView = (vid) => { 
+            document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); 
+            document.getElementById(vid).style.display = 'flex'; 
+        };
+        const openTask = (id, data) => { 
+            curTaskId = id; isEditing = true; 
+            document.getElementById('modal-title-display').value = data.text; 
+            document.getElementById('modal-label-select').value = data.label || 'none'; 
+            document.getElementById('modal-notes').value = data.notes || ''; 
+            document.getElementById('task-mode-preview').click(); 
+            document.getElementById('editor-modal').style.display='flex'; 
+        };
+        const openWiki = (id, data) => { 
+            curWikiId = id; isEditing = false; 
+            document.getElementById('wiki-title-display').value = data.title; 
+            document.getElementById('wiki-notes').value = data.content || ''; 
+            document.getElementById('wiki-preview').innerHTML = marked.parse(data.content || ''); 
+            showView('wiki-content-view'); 
+        };
         
-        document.getElementById('modal-label-select').onchange = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); };
+        document.getElementById('modal-label-select').onchange = async (e) => { 
+            if(curTaskId) {
+                document.getElementById('sync-indicator').classList.add('active');
+                await updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); 
+                document.getElementById('sync-indicator').classList.remove('active');
+            }
+        };
+        
         document.getElementById('modal-notes').oninput = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
+        document.getElementById('modal-title-display').oninput = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { text: e.target.value }); };
+        
+        document.getElementById('task-mode-preview').onclick = () => { 
+            document.getElementById('modal-notes').style.display='none'; 
+            document.getElementById('modal-preview').style.display='block'; 
+            document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value || 'No notes yet.'); 
+            document.getElementById('task-mode-preview').classList.add('btn-active');
+            document.getElementById('task-mode-edit').classList.remove('btn-active');
+        };
+        document.getElementById('task-mode-edit').onclick = () => { 
+            document.getElementById('modal-notes').style.display='block'; 
+            document.getElementById('modal-preview').style.display='none'; 
+            document.getElementById('task-mode-edit').classList.add('btn-active');
+            document.getElementById('task-mode-preview').classList.remove('btn-active');
+        };
+        
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
         document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
-        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
-        document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => { document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); b.classList.add('active'); showView(b.getAttribute('data-view')); });
+        
+        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => { 
+            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
+            b.classList.add('active'); 
+            showView(b.getAttribute('data-view')); 
+        });
     </script>
 </body>
 </html>
