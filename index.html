@@ -12,115 +12,117 @@
         body.dark-mode { --bg: #121212; --text: #e0e0e0; --sidebar: #1e1e1e; --border: #333; --card-bg: #1e1e1e; --accent: #818cf8; --nav-hover: rgba(255,255,255,0.05); }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); overflow: hidden; display: flex; transition: background 0.3s; }
         
-        #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e; opacity: 0; z-index: 9999; pointer-events: none; transition: 0.3s; }
+        /* --- SYNC & SEARCH --- */
+        #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; opacity: 0; z-index: 9999; pointer-events: none; }
         #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
-
-        /* --- SEARCH PALETTE --- */
-        #search-palette { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 9000; display: none; justify-content: center; padding-top: 100px; }
-        .search-box { background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid var(--border); overflow: hidden; height: fit-content; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        
+        #search-palette { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 9500; display: none; justify-content: center; padding-top: 80px; }
+        .search-box { background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); height: fit-content; overflow: hidden; }
         #search-input { width: 100%; padding: 20px; font-size: 18px; border: none; background: transparent; color: var(--text); outline: none; border-bottom: 1px solid var(--border); }
         #search-results { max-height: 400px; overflow-y: auto; padding: 10px; }
-        .search-item { padding: 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .search-item { padding: 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .search-item:hover { background: var(--nav-hover); }
-        .search-type { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #888; background: var(--sidebar); padding: 2px 6px; border-radius: 4px; }
 
         /* --- PROPERTY BADGES --- */
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
         .badge-none { display: none; }
-        .badge-mortgage { background: #dbeafe !important; color: #1e40af !important; }
-        .badge-church { background: #dcfce7 !important; color: #166534 !important; }
-        .badge-urgent { background: #fee2e2 !important; color: #991b1b !important; }
+        .badge-mortgage { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe; }
+        .badge-church { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0; }
+        .badge-urgent { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fecaca; }
 
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
-        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; font-size: 14px; transition: 0.1s; display: block; width: 100%; border: none; background: none; text-align: left; color: inherit; }
-        .nav-item:hover { background: var(--nav-hover); }
-        .active-nav { background: var(--border) !important; font-weight: 600; }
+        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; display: block; width: 100%; border: none; background: none; text-align: left; color: inherit; }
+        .nav-item:hover, .nav-item.active-nav { background: var(--nav-hover); font-weight: 600; }
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        #kanban-view, #wiki-list-view, #wiki-content-view, #news-view, #freebies-view { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
+        .card { background: var(--card-bg); padding: 18px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; }
 
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
-        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 14px; padding: 10px; opacity: 0.6; flex: 1; }
+        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 14px; opacity: 0.6; flex: 1; }
         .switch-btn.active { opacity: 1; color: var(--accent); font-weight: bold; }
 
-        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
-        .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
-
-        @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } #kanban-board { flex-direction: column; } .column { width: 100%; margin-right: 0; margin-bottom: 30px; } }
+        @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } #kanban-board { flex-direction: column; } }
     </style>
 </head>
 <body class="light-mode">
     <div id="sync-indicator"></div>
+    
     <div id="search-palette">
         <div class="search-box">
-            <input type="text" id="search-input" placeholder="Search Workspace (Tasks, Wiki, Lessons)..." autocomplete="off">
+            <input type="text" id="search-input" placeholder="Jump to... (Tasks, Lessons, Pages)" autocomplete="off">
             <div id="search-results"></div>
         </div>
     </div>
 
-    <div id="login-screen" style="position:fixed; inset:0; background:var(--bg); display:flex; justify-content:center; align-items:center; z-index:5000;">
+    <div id="login-screen" style="position:fixed; inset:0; background:var(--bg); display:flex; justify-content:center; align-items:center; z-index:9999;">
         <div style="background:var(--card-bg); padding:40px; border-radius:12px; text-align:center; border:1px solid var(--border); width:320px;">
             <h2>Jake's Workspace</h2>
-            <button id="login-btn" class="btn btn-active" style="width:100%; padding:12px;">Sign in with Google</button>
+            <button id="login-btn" style="width:100%; padding:12px; background:var(--accent); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">Sign in with Google</button>
         </div>
     </div>
 
-    <div id="mobile-switcher">
-        <button id="switch-tasks" class="switch-btn active">📊<br>BOARD</button>
-        <button id="switch-news" class="switch-btn">📰<br>AP</button>
-        <button id="switch-freebies" class="switch-btn">🎁<br>DEALS</button>
-        <button id="switch-wiki" class="switch-btn">📄<br>WIKI</button>
-    </div>
-
-    <div id="app-container" style="display:none; width: 100%;">
+    <div id="app-container" style="display:none; width: 100%; height: 100vh;">
         <div id="sidebar">
-            <div class="sidebar-section-label">Main</div>
-            <button id="nav-kanban" class="nav-item active-nav">📊 Kanban Board</button>
-            <button id="nav-news" class="nav-item">📰 AP News Feed</button>
-            <button id="nav-freebies" class="nav-item">🎁 Reddit Freebies</button>
-            <div class="sidebar-section-label">Wiki Library</div>
-            <div id="sidebar-wiki-list" style="flex-grow: 1; overflow-y: auto;"></div >
-            <button id="add-wiki-btn" class="nav-item" style="border: 1px dashed #888; color: #888; text-align:center; margin-top:10px;">+ New Page</button>
-            <div style="margin-top: 20px; display: flex; gap: 8px;"><button id="theme-toggle" class="btn" style="flex:1;">🌙 Mode</button><button id="logout-btn" class="btn" style="flex:1;">🚪 Out</button></div>
+            <div style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin: 10px 0 10px 5px;">Workspace</div>
+            <button class="nav-item" data-view="kanban-view">📊 Kanban Board</button>
+            <button class="nav-item" data-view="news-view">📰 AP News Feed</button>
+            <button class="nav-item" data-view="freebies-view">🎁 Reddit Deals</button>
+            <div style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin: 20px 0 10px 5px;">Wiki</div>
+            <div id="sidebar-wiki-list" style="flex-grow: 1; overflow-y: auto;"></div>
+            <button id="add-wiki-btn" class="nav-item" style="border: 1px dashed #888; color: #888; text-align:center;">+ New Page</button>
+            <div style="margin-top: 20px; display: flex; gap: 8px;"><button id="theme-toggle" class="nav-item" style="text-align:center; background:var(--border);">🌙 Mode</button><button id="logout-btn" class="nav-item" style="text-align:center; background:var(--border);">🚪 Out</button></div>
         </div>
 
         <div id="main-content">
-            <div id="kanban-view">
-                <div id="kanban-board" style="display:flex;">
-                    <div class="column" data-status="todo"><div class="column-header" style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" class="btn" style="padding:2px 8px;">+</button></div><div id="todo-list" class="card-list"></div></div>
-                    <div class="column" data-status="doing"><div class="column-header" style="font-weight:700; padding-bottom:15px;">Doing</div><div id="doing-list" class="card-list"></div></div>
-                    <div class="column" data-status="done"><div class="column-header" style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" class="card-list"></div></div>
+            <div id="kanban-view" class="view-pane" style="display: flex;">
+                <div id="kanban-board" style="display:flex; gap:20px;">
+                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" style="padding:2px 8px; cursor:pointer;">+</button></div><div id="todo-list" class="card-list" style="min-height:200px;"></div></div>
+                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Doing</div><div id="doing-list" class="card-list" style="min-height:200px;"></div></div>
+                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" class="card-list" style="min-height:200px;"></div></div>
                 </div>
             </div>
-            <div id="news-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Sync</button></div><div id="news-container" class="news-grid"></div></div>
-            <div id="freebies-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Freebies</h2><button onclick="fetchFreebies()" class="btn">🔄 Refresh Deals</button></div><div id="freebies-container" class="news-grid"></div></div>
-            <div id="wiki-list-view" style="display:none;"><h2>Wiki Library</h2><div id="mobile-wiki-list"></div></div>
-            <div id="wiki-content-view" style="display: none;">
-                <div class="wiki-header" style="border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:10px;">
-                    <input type="text" id="wiki-title-display" style="font-size:24px; font-weight:800; border:none; background:transparent; width:100%; color:inherit;">
-                    <div style="margin-top:10px; display:flex; gap:10px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button><button onclick="showView(document.getElementById('wiki-list-view'))" class="btn">List</button></div>
-                </div>
-                <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:15px; font-size:16px;"></textarea>
+
+            <div id="news-view" class="view-pane">
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News</h2><button onclick="fetchAP()" style="padding:8px; cursor:pointer;">🔄 Sync</button></div>
+                <div id="news-container" class="news-grid"></div>
+            </div>
+
+            <div id="freebies-view" class="view-pane">
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals</h2><button onclick="fetchFreebies()" style="padding:8px; cursor:pointer;">🔄 Sync</button></div>
+                <div id="freebies-container" class="news-grid"></div>
+            </div>
+
+            <div id="wiki-content-view" class="view-pane">
+                <input type="text" id="wiki-title-display" style="font-size:24px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px;">
+                <div style="display:flex; gap:10px; margin-bottom:20px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button></div>
+                <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit;"></textarea>
                 <div id="wiki-preview" style="line-height:1.6;"></div>
             </div>
         </div>
     </div>
 
-    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
-        <div class="modal-content" style="background:var(--card-bg); width:95%; max-width:750px; padding:30px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
+    <div id="mobile-switcher">
+        <button class="switch-btn active" data-view="kanban-view">📊<br>BOARD</button>
+        <button class="switch-btn" data-view="news-view">📰<br>AP</button>
+        <button class="switch-btn" data-view="freebies-view">🎁<br>DEALS</button>
+        <button class="switch-btn" data-view="wiki-content-view">📄<br>WIKI</button>
+    </div>
+
+    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
+        <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
-            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:90%;">
+            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit;">
             <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:10px 0;">
                 <label style="font-size:11px; font-weight:800; color:#888; margin-right:10px;">CATEGORY:</label>
-                <select id="modal-label-select" style="padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--sidebar); color:var(--text); font-size:12px;">
+                <select id="modal-label-select" style="padding:5px; background:var(--sidebar); color:var(--text); border:1px solid var(--border); border-radius:4px;">
                     <option value="none">None</option><option value="mortgage">🏠 Mortgage</option><option value="church">⛪ Church</option><option value="urgent">🚨 Urgent</option>
                 </select>
             </div>
             <div style="margin:15px 0; display:flex; gap:10px;"><button id="task-mode-preview" class="btn btn-active">Preview</button><button id="task-mode-edit" class="btn">Edit</button></div>
-            <textarea id="modal-notes" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit; font-size:16px;"></textarea>
-            <div id="modal-preview" style="line-height:1.6;"></div>
+            <textarea id="modal-notes" style="display:none; width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit;"></textarea>
+            <div id="modal-preview"></div>
         </div>
     </div>
 
@@ -129,136 +131,116 @@
         import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, sortables = [], userReadList = [];
+        const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
+        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, userReadList = [];
 
-        const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
-        applyTheme(localStorage.getItem('theme') || 'light');
-        document.getElementById('theme-toggle').onclick = () => { const dark = !document.body.classList.contains('dark-mode'); applyTheme(dark ? 'dark' : 'light'); };
-        const showSync = (active) => document.getElementById('sync-indicator').classList.toggle('active', active);
+        // --- NAVIGATION ENGINE ---
+        const showView = (vid) => {
+            document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none');
+            const target = document.getElementById(vid); if(target) target.style.display = 'flex';
+            document.querySelectorAll('.switch-btn, .nav-item').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-view') === vid);
+                b.classList.toggle('active-nav', b.getAttribute('data-view') === vid);
+            });
+            if(vid === 'news-view') fetchAP(); if(vid === 'freebies-view') fetchFreebies();
+        };
 
-        onAuthStateChanged(auth, async (u) => {
-            if(u) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-container').style.display = 'flex';
-                const ud = await getDoc(doc(db, 'users', u.uid));
-                userReadList = ud.exists() ? ud.data().readArticles || [] : [];
-                fetchAP(); fetchFreebies();
-            } else { document.getElementById('login-screen').style.display = 'flex'; }
+        document.addEventListener('click', (e) => {
+            const nav = e.target.closest('[data-view]');
+            if(nav) showView(nav.getAttribute('data-view'));
+            const card = e.target.closest('.card');
+            if(card) {
+                const tid = card.getAttribute('data-id'); const t = allTasks.find(d => d.id === tid);
+                if(t) openTask(tid, t.data());
+            }
+            const wikiItem = e.target.closest('.wiki-nav-btn');
+            if(wikiItem) openWiki(wikiItem.getAttribute('data-id'), allWiki.find(d => d.id === wikiItem.getAttribute('data-id')).data());
         });
-        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // --- GLOBAL SEARCH ---
-        window.addEventListener('keydown', (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-palette').style.display = 'flex'; document.getElementById('search-input').focus(); }
-            if (e.key === 'Escape') { document.getElementById('search-palette').style.display = 'none'; }
-        });
+        // --- SEARCH ENGINE ---
+        window.onkeydown = (e) => {
+            if((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-palette').style.display='flex'; document.getElementById('search-input').focus(); }
+            if(e.key === 'Escape') document.getElementById('search-palette').style.display='none';
+        };
         document.getElementById('search-input').oninput = (e) => {
-            const q = e.target.value.toLowerCase(); const res = document.getElementById('search-results'); res.innerHTML = '';
-            if(!q) return;
-            [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',data:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',data:w.data()}))].forEach(item => {
-                if(item.t.toLowerCase().includes(q)) {
-                    const div = document.createElement('div'); div.className = 'search-item'; div.innerHTML = `<span>${item.t}</span><span class="search-type">${item.type}</span>`;
-                    div.onclick = () => {
-                        document.getElementById('search-palette').style.display = 'none';
-                        if(item.type === 'TASK') openTask(item.id, item.data); else openWiki(item.id, item.data);
-                    };
+            const q = e.target.value.toLowerCase(); const res = document.getElementById('search-results'); res.innerHTML = ''; if(!q) return;
+            [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',data:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',data:w.data()}))].forEach(i => {
+                if(i.t.toLowerCase().includes(q)) {
+                    const div = document.createElement('div'); div.className = 'search-item'; div.innerHTML = `<span>${i.t}</span><small style="color:#888">${i.type}</small>`;
+                    div.onclick = () => { document.getElementById('search-palette').style.display='none'; if(i.type==='TASK') openTask(i.id,i.data); else openWiki(i.id,i.data); };
                     res.appendChild(div);
                 }
             });
         };
 
-        // --- NEWS TUNER ---
-        async function fetchSource(cid, url, type) {
-            const container = document.getElementById(cid); container.innerHTML = `<p>Syncing ${type}...</p>`;
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}&cb=${Date.now()}`);
-                const raw = await res.json(); const data = raw.contents || raw;
-                if(!data) throw 'err';
-                container.innerHTML = '';
-                if(type === 'AP') {
-                    const xml = new DOMParser().parseFromString(data, "text/xml");
-                    Array.from(xml.querySelectorAll("item")).forEach((item, i) => {
-                        if(i > 24) return; const title = item.querySelector("title")?.textContent; const link = item.querySelector("link")?.textContent;
-                        const card = document.createElement('div'); card.className = `news-card ${userReadList.includes(link)?'read':''}`;
-                        card.innerHTML = `<div class="news-title">${title}</div><div class="news-footer"><span>AP</span><label class="read-toggle"><input type="checkbox" ${userReadList.includes(link)?'checked':''}> Read</label></div>`;
-                        card.onclick = () => { window.open(link, '_blank'); toggleRead(link, true, card); };
-                        container.appendChild(card);
-                    });
-                } else {
-                    const items = JSON.parse(data).data.children;
-                    items.forEach(item => {
-                        const post = item.data; const link = `https://reddit.com${post.permalink}`;
-                        const card = document.createElement('div'); card.className = `news-card ${userReadList.includes(link)?'read':''}`;
-                        card.innerHTML = `<div class="news-title">${post.title}</div><div class="news-footer"><span>DEALS</span><label class="read-toggle"><input type="checkbox" ${userReadList.includes(link)?'checked':''}> Read</label></div>`;
-                        card.onclick = () => { window.open(link, '_blank'); toggleRead(link, true, card); };
-                        container.appendChild(card);
-                    });
-                }
-            } catch(e) { container.innerHTML = `<p style="color:red;">${type} Jammed.</p>`; }
-        }
-        window.fetchAP = () => fetchSource('news-container', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP');
-        window.fetchFreebies = () => fetchSource('freebies-container', 'https://www.reddit.com/r/freebies.json?limit=25', 'DEALS');
+        // --- AUTH & DATA ---
+        onAuthStateChanged(auth, async (u) => {
+            if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='flex';
+                const ud = await getDoc(doc(db, 'users', u.uid)); userReadList = ud.exists() ? ud.data().readArticles || [] : [];
+            } else { document.getElementById('login-screen').style.display='flex'; }
+        });
+        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 
-        // --- BOARD LOGIC ---
-        const openTask = (id, data) => { curTaskId = id; isEditing = true; document.getElementById('modal-title-display').value = data.text; document.getElementById('modal-label-select').value = data.label || 'none'; document.getElementById('modal-notes').value = data.notes || ''; document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display = 'flex'; };
-        const openWiki = (id, data) => { curWikiId = id; isEditing = false; document.getElementById('wiki-title-display').value = data.title; document.getElementById('wiki-notes').value = data.content || ''; document.getElementById('wiki-mode-preview').click(); showView(document.getElementById('wiki-content-view')); };
-
-        onSnapshot(collection(db, "tasks"), (s) => { 
-            allTasks = s.docs; 
-            ['todo-list','doing-list','done-list'].forEach(id => {
-                const list = document.getElementById(id); list.innerHTML = '';
-                allTasks.filter(d => d.data().status === id.split('-')[0]).forEach(d => {
-                    const t = d.data(); const card = document.createElement('div'); card.className = 'card';
-                    card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
-                    card.onclick = () => openTask(d.id, t);
+        onSnapshot(collection(db, "tasks"), (s) => {
+            allTasks = s.docs;
+            ['todo','doing','done'].forEach(st => {
+                const list = document.getElementById(`${st}-list`); list.innerHTML = '';
+                allTasks.filter(d => d.data().status === st).forEach(d => {
+                    const t = d.data(); const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
+                    card.innerHTML = `<div class="badge badge-${t.label||'none'}">${t.label||''}</div><div>${t.text}</div>`;
                     list.appendChild(card);
                 });
             });
-            sortables.forEach(s => s.destroy());
-            sortables = ['todo-list','doing-list','done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', onEnd: async (e) => {
-                showSync(true); await updateDoc(doc(db, 'tasks', e.item.getAttribute('data-id')), { status: e.to.parentElement.getAttribute('data-status') }); showSync(false);
-            }}));
         });
 
         onSnapshot(collection(db, "wiki"), (s) => {
-            allWiki = s.docs; const side = document.getElementById('sidebar-wiki-list'), mob = document.getElementById('mobile-wiki-list');
-            side.innerHTML = ''; mob.innerHTML = '';
+            allWiki = s.docs; const list = document.getElementById('sidebar-wiki-list'); list.innerHTML = '';
             s.docs.forEach(d => {
-                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = d.data().title;
-                btn.onclick = () => openWiki(d.id, d.data());
-                side.appendChild(btn); mob.appendChild(btn.cloneNode(true));
-                mob.lastChild.onclick = btn.onclick;
+                const btn = document.createElement('button'); btn.className = 'nav-item wiki-nav-btn'; btn.innerText = `📄 ${d.data().title}`; btn.setAttribute('data-id', d.id);
+                list.appendChild(btn);
             });
         });
 
-        const showView = (v) => {
-            [document.getElementById('kanban-view'), document.getElementById('wiki-list-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('freebies-view')].forEach(d => d.style.display = 'none');
-            v.style.display = 'flex';
-            document.querySelectorAll('.switch-btn, .nav-item').forEach(b => b.classList.remove('active','active-nav'));
-            if(v.id === 'kanban-view') document.getElementById('nav-kanban').classList.add('active-nav');
+        // --- TOOLS ---
+        const openTask = (id, data) => { curTaskId = id; isEditing = true; document.getElementById('modal-title-display').value = data.text; document.getElementById('modal-label-select').value = data.label||'none'; document.getElementById('modal-notes').value = data.notes||''; document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display='flex'; };
+        const openWiki = (id, data) => { curWikiId = id; isEditing = false; document.getElementById('wiki-title-display').value = data.title; document.getElementById('wiki-notes').value = data.content||''; document.getElementById('wiki-mode-preview').click(); showView('wiki-content-view'); };
+
+        window.fetchAP = async () => {
+            const container = document.getElementById('news-container'); container.innerHTML = '<p>Syncing...</p>';
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en')}&cb=${Date.now()}`);
+            const json = await res.json(); const xml = new DOMParser().parseFromString(json.contents, "text/xml");
+            container.innerHTML = '';
+            Array.from(xml.querySelectorAll("item")).slice(0,25).forEach(item => {
+                const title = item.querySelector("title")?.textContent; const link = item.querySelector("link")?.textContent;
+                const card = document.createElement('div'); card.className = `news-card ${userReadList.includes(link)?'read':''}`;
+                card.innerHTML = `<div class="news-title">${title}</div><small>AP NEWS</small>`;
+                card.onclick = () => window.open(link, '_blank'); container.appendChild(card);
+            });
         };
 
-        const autoSave = async (col, id, obj) => { if(id && isEditing) { showSync(true); await updateDoc(doc(db, col, id), obj); showSync(false); }};
-        document.getElementById('modal-notes').oninput = () => autoSave('tasks', curTaskId, { notes: document.getElementById('modal-notes').value });
-        document.getElementById('modal-title-display').oninput = () => autoSave('tasks', curTaskId, { text: document.getElementById('modal-title-display').value });
-        document.getElementById('modal-label-select').onchange = () => autoSave('tasks', curTaskId, { label: document.getElementById('modal-label-select').value });
+        window.fetchFreebies = async () => {
+            const container = document.getElementById('freebies-container'); container.innerHTML = '<p>Syncing Deals...</p>';
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=25')}`);
+            const json = await res.json(); const items = JSON.parse(json.contents).data.children;
+            container.innerHTML = '';
+            items.forEach(i => {
+                const p = i.data; const link = `https://reddit.com${p.permalink}`;
+                const card = document.createElement('div'); card.className = `news-card ${userReadList.includes(link)?'read':''}`;
+                card.innerHTML = `<div class="news-title">${p.title}</div><small>REDDIT</small>`;
+                card.onclick = () => window.open(link, '_blank'); container.appendChild(card);
+            });
+        };
 
-        document.getElementById('task-mode-preview').onclick = (e) => { isEditing = false; document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value); document.getElementById('task-mode-edit').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
-        document.getElementById('task-mode-edit').onclick = (e) => { isEditing = true; document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; document.getElementById('task-mode-preview').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
+        // --- AUTO-SAVE ---
+        const save = async (col, id, obj) => { if(id && isEditing) { document.getElementById('sync-indicator').classList.add('active'); await updateDoc(doc(db, col, id), obj); setTimeout(()=>document.getElementById('sync-indicator').classList.remove('active'), 1000); } };
+        document.getElementById('modal-notes').oninput = () => save('tasks', curTaskId, { notes: document.getElementById('modal-notes').value });
+        document.getElementById('modal-label-select').onchange = () => save('tasks', curTaskId, { label: document.getElementById('modal-label-select').value });
         
+        document.getElementById('task-mode-preview').onclick = () => { isEditing = false; document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value); };
+        document.getElementById('task-mode-edit').onclick = () => { isEditing = true; document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
-        document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
-        
-        document.getElementById('switch-tasks').onclick = () => showView(document.getElementById('kanban-view'));
-        document.getElementById('switch-news').onclick = () => showView(document.getElementById('news-view'));
-        document.getElementById('switch-freebies').onclick = () => showView(document.getElementById('freebies-view'));
-        document.getElementById('switch-wiki').onclick = () => showView(document.getElementById('wiki-list-view'));
     </script>
 </body>
 </html>
