@@ -16,15 +16,21 @@
         #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
-        /* --- PROPERTY LABELS --- */
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        /* --- SEARCH PALETTE --- */
+        #search-palette { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 9000; display: none; justify-content: center; padding-top: 100px; }
+        .search-box { background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid var(--border); overflow: hidden; height: fit-content; }
+        #search-input { width: 100%; padding: 20px; font-size: 18px; border: none; background: transparent; color: var(--text); outline: none; border-bottom: 1px solid var(--border); }
+        #search-results { max-height: 400px; overflow-y: auto; padding: 10px; }
+        .search-item { padding: 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .search-item:hover { background: var(--nav-hover); }
+        .search-type { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #888; background: var(--sidebar); padding: 2px 6px; border-radius: 4px; }
+
+        /* --- PROPERTY BADGES --- */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         .badge-none { display: none; }
-        .badge-mortgage { background: #dbeafe; color: #1e40af; }
-        .badge-church { background: #dcfce7; color: #166534; }
-        .badge-urgent { background: #fee2e2; color: #991b1b; }
-        .dark-mode .badge-mortgage { background: #1e3a8a; color: #dbeafe; }
-        .dark-mode .badge-church { background: #064e3b; color: #dcfce7; }
-        .dark-mode .badge-urgent { background: #7f1d1d; color: #fee2e2; }
+        .badge-mortgage { background: #dbeafe !important; color: #1e40af !important; }
+        .badge-church { background: #dcfce7 !important; color: #166534 !important; }
+        .badge-urgent { background: #fee2e2 !important; color: #991b1b !important; }
 
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; font-size: 14px; transition: 0.1s; display: block; width: 100%; border: none; background: none; text-align: left; color: inherit; }
@@ -33,11 +39,7 @@
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         #kanban-view, #wiki-list-view, #wiki-content-view, #news-view, #freebies-view { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; box-sizing: border-box; }
-        
         .card { background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
-        .news-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
-        .news-card.read { opacity: 0.4; filter: grayscale(1); order: 1; }
 
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 14px; padding: 10px; opacity: 0.6; flex: 1; }
@@ -51,6 +53,13 @@
 </head>
 <body class="light-mode">
     <div id="sync-indicator"></div>
+    <div id="search-palette">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search Workspace (Tasks, Wiki, Lessons)..." autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+    </div>
+
     <div id="login-screen" style="position:fixed; inset:0; background:var(--bg); display:flex; justify-content:center; align-items:center; z-index:5000;">
         <div style="background:var(--card-bg); padding:40px; border-radius:12px; text-align:center; border:1px solid var(--border); width:320px;">
             <h2>Jake's Workspace</h2>
@@ -85,13 +94,13 @@
                     <div class="column" data-status="done"><div class="column-header" style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" class="card-list"></div></div>
                 </div>
             </div>
-            <div id="news-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button id="sync-ap-btn" class="btn">🔄 Sync</button></div><div id="news-container" class="news-grid"></div></div>
-            <div id="freebies-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Freebies</h2><button id="sync-deals-btn" class="btn">🔄 Refresh Deals</button></div><div id="freebies-container" class="news-grid"></div></div>
+            <div id="news-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="fetchAP()" class="btn">🔄 Sync</button></div><div id="news-container" class="news-grid"></div></div>
+            <div id="freebies-view" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Freebies</h2><button onclick="fetchFreebies()" class="btn">🔄 Refresh Deals</button></div><div id="freebies-container" class="news-grid"></div></div>
             <div id="wiki-list-view" style="display:none;"><h2>Wiki Library</h2><div id="mobile-wiki-list"></div></div>
             <div id="wiki-content-view" style="display: none;">
                 <div class="wiki-header" style="border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:10px;">
                     <input type="text" id="wiki-title-display" style="font-size:24px; font-weight:800; border:none; background:transparent; width:100%; color:inherit;">
-                    <div style="margin-top:10px; display:flex; gap:10px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button><button id="list-wiki-btn" class="btn">List</button></div>
+                    <div style="margin-top:10px; display:flex; gap:10px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button><button onclick="showView(document.getElementById('wiki-list-view'))" class="btn">List</button></div>
                 </div>
                 <textarea id="wiki-notes" style="display:none; width:100%; height:500px; background:transparent; color:inherit; border:1px solid var(--border); padding:15px; font-size:16px;"></textarea>
                 <div id="wiki-preview" style="line-height:1.6;"></div>
@@ -102,20 +111,15 @@
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(2px);">
         <div class="modal-content" style="background:var(--card-bg); width:95%; max-width:750px; padding:30px; border-radius:12px; position:relative; max-height: 90vh; overflow-y: auto;">
             <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
-            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:90%;" placeholder="Task Title">
-            
-            <div style="margin:20px 0; display:flex; gap:15px; align-items:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:10px 0;">
-                <label style="font-size:12px; font-weight:700; color:#888;">CATEGORY:</label>
-                <select id="modal-label-select" style="background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:5px 10px; border-radius:4px; font-size:12px; cursor:pointer;">
-                    <option value="none">None</option>
-                    <option value="mortgage">🏠 Mortgage</option>
-                    <option value="church">⛪ Church</option>
-                    <option value="urgent">🚨 Urgent</option>
+            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; outline:none; color:inherit; width:90%;">
+            <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:10px 0;">
+                <label style="font-size:11px; font-weight:800; color:#888; margin-right:10px;">CATEGORY:</label>
+                <select id="modal-label-select" style="padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--sidebar); color:var(--text); font-size:12px;">
+                    <option value="none">None</option><option value="mortgage">🏠 Mortgage</option><option value="church">⛪ Church</option><option value="urgent">🚨 Urgent</option>
                 </select>
             </div>
-
             <div style="margin:15px 0; display:flex; gap:10px;"><button id="task-mode-preview" class="btn btn-active">Preview</button><button id="task-mode-edit" class="btn">Edit</button></div>
-            <textarea id="modal-notes" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit; font-size:16px;" placeholder="Add notes (Markdown supported)..."></textarea>
+            <textarea id="modal-notes" style="display:none; width:100%; min-height:300px; padding:15px; background:transparent; border:1px solid var(--border); color:inherit; font-size:16px;"></textarea>
             <div id="modal-preview" style="line-height:1.6;"></div>
         </div>
     </div>
@@ -129,7 +133,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-        let curTaskId = null, curWikiId = null, allTasks = [], isEditing = false, sortables = [], userReadList = [];
+        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, sortables = [], userReadList = [];
 
         const applyTheme = (t) => { document.body.classList.toggle('dark-mode', t === 'dark'); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'light');
@@ -148,164 +152,113 @@
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        async function toggleRead(link, read, card) {
-            if (read) { if (!userReadList.includes(link)) userReadList.push(link); card.classList.add('read'); card.style.order = "1"; }
-            else { userReadList = userReadList.filter(l => l !== link); card.classList.remove('read'); card.style.order = "0"; }
-            if(auth.currentUser) { showSync(true); await setDoc(doc(db, 'users', auth.currentUser.uid), { readArticles: userReadList }, { merge: true }); showSync(false); }
-        }
-
-        window.fetchSource = async (cid, url, type) => {
-            const container = document.getElementById(cid);
-            container.innerHTML = `<p>Syncing ${type} signal...</p>`;
-            const proxies = [`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,`https://corsproxy.io/?${encodeURIComponent(url)}`];
-            let rawData = null;
-            for (let proxy of proxies) {
-                try {
-                    const res = await fetch(`${proxy}${proxy.includes('?') ? '&' : '?'}cb=${Date.now()}`);
-                    if (res.ok) { 
-                        const raw = await res.json();
-                        rawData = raw.contents || raw;
-                        if (rawData) break;
-                    }
-                } catch (e) { continue; }
-            }
-            if (!rawData) { container.innerHTML = `<p style="color:red;">${type} Jammed.</p>`; return; }
-            if (type === 'AP') {
-                const xml = new DOMParser().parseFromString(rawData, "text/xml");
-                const items = Array.from(xml.querySelectorAll("item"));
-                container.innerHTML = '';
-                items.forEach((item, i) => {
-                    if (i > 24) return;
-                    const title = item.querySelector("title")?.textContent || "Breaking Intel...";
-                    const link = item.querySelector("link")?.textContent || "#";
-                    const isRead = userReadList.includes(link);
-                    const card = document.createElement('div');
-                    card.className = `news-card ${isRead ? 'read' : ''}`;
-                    card.style.order = isRead ? "1" : "0";
-                    card.innerHTML = `<div class="news-title">${title}</div><div class="news-footer"><span>AP</span><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Read</label></div>`;
-                    card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
-                    const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
-                    container.appendChild(card);
-                });
-            } else {
-                const json = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-                const items = json.data?.children || [];
-                container.innerHTML = '';
-                items.forEach(item => {
-                    const post = item.data;
-                    const link = `https://reddit.com${post.permalink}`;
-                    const isRead = userReadList.includes(link);
-                    const card = document.createElement('div');
-                    card.className = `news-card ${isRead ? 'read' : ''}`;
-                    card.style.order = isRead ? "1" : "0";
-                    card.innerHTML = `<div class="news-title">${post.title}</div><div class="news-footer"><span>REDDIT</span><label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Read</label></div>`;
-                    card.onclick = () => { toggleRead(link, true, card); window.open(link, '_blank'); };
-                    const cb = card.querySelector('input'); cb.onclick = (e) => { e.stopPropagation(); toggleRead(link, cb.checked, card); };
-                    container.appendChild(card);
-                });
-            }
+        // --- GLOBAL SEARCH ---
+        window.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-palette').style.display = 'flex'; document.getElementById('search-input').focus(); }
+            if (e.key === 'Escape') { document.getElementById('search-palette').style.display = 'none'; }
+        });
+        document.getElementById('search-input').oninput = (e) => {
+            const q = e.target.value.toLowerCase(); const res = document.getElementById('search-results'); res.innerHTML = '';
+            if(!q) return;
+            [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',data:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',data:w.data()}))].forEach(item => {
+                if(item.t.toLowerCase().includes(q)) {
+                    const div = document.createElement('div'); div.className = 'search-item'; div.innerHTML = `<span>${item.t}</span><span class="search-type">${item.type}</span>`;
+                    div.onclick = () => {
+                        document.getElementById('search-palette').style.display = 'none';
+                        if(item.type === 'TASK') openTask(item.id, item.data); else openWiki(item.id, item.data);
+                    };
+                    res.appendChild(div);
+                }
+            });
         };
+
+        // --- NEWS TUNER ---
+        async function fetchSource(cid, url, type) {
+            const container = document.getElementById(cid); container.innerHTML = `<p>Syncing ${type}...</p>`;
+            try {
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}&cb=${Date.now()}`);
+                const raw = await res.json(); const data = raw.contents || raw;
+                if(!data) throw 'err';
+                container.innerHTML = '';
+                if(type === 'AP') {
+                    const xml = new DOMParser().parseFromString(data, "text/xml");
+                    Array.from(xml.querySelectorAll("item")).forEach((item, i) => {
+                        if(i > 24) return; const title = item.querySelector("title")?.textContent; const link = item.querySelector("link")?.textContent;
+                        const card = document.createElement('div'); card.className = `news-card ${userReadList.includes(link)?'read':''}`;
+                        card.innerHTML = `<div class="news-title">${title}</div><div class="news-footer"><span>AP</span><label class="read-toggle"><input type="checkbox" ${userReadList.includes(link)?'checked':''}> Read</label></div>`;
+                        card.onclick = () => { window.open(link, '_blank'); toggleRead(link, true, card); };
+                        container.appendChild(card);
+                    });
+                } else {
+                    const items = JSON.parse(data).data.children;
+                    items.forEach(item => {
+                        const post = item.data; const link = `https://reddit.com${post.permalink}`;
+                        const card = document.createElement('div'); card.className = `news-card ${userReadList.includes(link)?'read':''}`;
+                        card.innerHTML = `<div class="news-title">${post.title}</div><div class="news-footer"><span>DEALS</span><label class="read-toggle"><input type="checkbox" ${userReadList.includes(link)?'checked':''}> Read</label></div>`;
+                        card.onclick = () => { window.open(link, '_blank'); toggleRead(link, true, card); };
+                        container.appendChild(card);
+                    });
+                }
+            } catch(e) { container.innerHTML = `<p style="color:red;">${type} Jammed.</p>`; }
+        }
         window.fetchAP = () => fetchSource('news-container', 'https://news.google.com/rss/search?q=when:24h+AP+News&hl=en-US&gl=US&ceid=US:en', 'AP');
         window.fetchFreebies = () => fetchSource('freebies-container', 'https://www.reddit.com/r/freebies.json?limit=25', 'DEALS');
 
-        ['todo-list', 'doing-list', 'done-list'].forEach(id => {
-            document.getElementById(id).addEventListener('click', (e) => {
-                const card = e.target.closest('.card');
-                if (card) {
-                    const tid = card.getAttribute('data-id');
-                    const task = allTasks.find(d => d.id === tid);
-                    if (task) {
-                        curTaskId = tid; isEditing = true;
-                        document.getElementById('modal-title-display').value = task.data().text;
-                        document.getElementById('modal-label-select').value = task.data().label || 'none';
-                        document.getElementById('modal-notes').value = task.data().notes || '';
-                        document.getElementById('task-mode-preview').click();
-                        document.getElementById('editor-modal').style.display = 'flex';
-                    }
-                }
-            });
-        });
+        // --- BOARD LOGIC ---
+        const openTask = (id, data) => { curTaskId = id; isEditing = true; document.getElementById('modal-title-display').value = data.text; document.getElementById('modal-label-select').value = data.label || 'none'; document.getElementById('modal-notes').value = data.notes || ''; document.getElementById('task-mode-preview').click(); document.getElementById('editor-modal').style.display = 'flex'; };
+        const openWiki = (id, data) => { curWikiId = id; isEditing = false; document.getElementById('wiki-title-display').value = data.title; document.getElementById('wiki-notes').value = data.content || ''; document.getElementById('wiki-mode-preview').click(); showView(document.getElementById('wiki-content-view')); };
 
-        const handleWikiClick = (e) => {
-            const btn = e.target.closest('.nav-item');
-            if (btn) {
-                const wid = btn.getAttribute('data-id');
-                curWikiId = wid; isEditing = false;
-                getDoc(doc(db, 'wiki', wid)).then(d => {
-                    document.getElementById('wiki-title-display').value = d.data().title;
-                    document.getElementById('wiki-notes').value = d.data().content || '';
-                    document.getElementById('wiki-mode-preview').click();
-                    showView(document.getElementById('wiki-content-view'));
-                });
-            }
-        };
-        document.getElementById('sidebar-wiki-list').addEventListener('click', handleWikiClick);
-        document.getElementById('mobile-wiki-list').addEventListener('click', handleWikiClick);
-
-        function renderBoard() {
-            if (isEditing) return;
-            ['todo-list', 'doing-list', 'done-list'].forEach(id => {
+        onSnapshot(collection(db, "tasks"), (s) => { 
+            allTasks = s.docs; 
+            ['todo-list','doing-list','done-list'].forEach(id => {
                 const list = document.getElementById(id); list.innerHTML = '';
-                const status = id.split('-')[0];
-                allTasks.forEach(d => { 
-                    if (d.data().status === status) { 
-                        const t = d.data();
-                        const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id); 
-                        card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
-                        list.appendChild(card); 
-                    } 
+                allTasks.filter(d => d.data().status === id.split('-')[0]).forEach(d => {
+                    const t = d.data(); const card = document.createElement('div'); card.className = 'card';
+                    card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
+                    card.onclick = () => openTask(d.id, t);
+                    list.appendChild(card);
                 });
             });
             sortables.forEach(s => s.destroy());
-            sortables = ['todo-list', 'doing-list', 'done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', onEnd: async (e) => {
+            sortables = ['todo-list','doing-list','done-list'].map(id => new Sortable(document.getElementById(id), { group: 'kanban', onEnd: async (e) => {
                 showSync(true); await updateDoc(doc(db, 'tasks', e.item.getAttribute('data-id')), { status: e.to.parentElement.getAttribute('data-status') }); showSync(false);
             }}));
-        }
-        onSnapshot(collection(db, "tasks"), (s) => { allTasks = s.docs; renderBoard(); });
+        });
+
         onSnapshot(collection(db, "wiki"), (s) => {
-            const side = document.getElementById('sidebar-wiki-list'), mob = document.getElementById('mobile-wiki-list');
+            allWiki = s.docs; const side = document.getElementById('sidebar-wiki-list'), mob = document.getElementById('mobile-wiki-list');
             side.innerHTML = ''; mob.innerHTML = '';
             s.docs.forEach(d => {
-                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = d.data().title; btn.setAttribute('data-id', d.id);
+                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = d.data().title;
+                btn.onclick = () => openWiki(d.id, d.data());
                 side.appendChild(btn); mob.appendChild(btn.cloneNode(true));
+                mob.lastChild.onclick = btn.onclick;
             });
         });
 
         const showView = (v) => {
             [document.getElementById('kanban-view'), document.getElementById('wiki-list-view'), document.getElementById('wiki-content-view'), document.getElementById('news-view'), document.getElementById('freebies-view')].forEach(d => d.style.display = 'none');
             v.style.display = 'flex';
-            document.querySelectorAll('.switch-btn, .nav-item').forEach(b => b.classList.remove('active', 'active-nav'));
-            const map = {'kanban-view':'switch-tasks', 'news-view':'switch-news', 'freebies-view':'switch-freebies', 'wiki-list-view':'switch-wiki', 'wiki-content-view':'switch-wiki'};
-            if(map[v.id]) document.getElementById(map[v.id]).classList.add('active');
+            document.querySelectorAll('.switch-btn, .nav-item').forEach(b => b.classList.remove('active','active-nav'));
+            if(v.id === 'kanban-view') document.getElementById('nav-kanban').classList.add('active-nav');
         };
 
+        const autoSave = async (col, id, obj) => { if(id && isEditing) { showSync(true); await updateDoc(doc(db, col, id), obj); showSync(false); }};
+        document.getElementById('modal-notes').oninput = () => autoSave('tasks', curTaskId, { notes: document.getElementById('modal-notes').value });
+        document.getElementById('modal-title-display').oninput = () => autoSave('tasks', curTaskId, { text: document.getElementById('modal-title-display').value });
+        document.getElementById('modal-label-select').onchange = () => autoSave('tasks', curTaskId, { label: document.getElementById('modal-label-select').value });
+
+        document.getElementById('task-mode-preview').onclick = (e) => { isEditing = false; document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value); document.getElementById('task-mode-edit').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
+        document.getElementById('task-mode-edit').onclick = (e) => { isEditing = true; document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; document.getElementById('task-mode-preview').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
+        
+        document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
+        document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
+        
         document.getElementById('switch-tasks').onclick = () => showView(document.getElementById('kanban-view'));
         document.getElementById('switch-news').onclick = () => showView(document.getElementById('news-view'));
         document.getElementById('switch-freebies').onclick = () => showView(document.getElementById('freebies-view'));
         document.getElementById('switch-wiki').onclick = () => showView(document.getElementById('wiki-list-view'));
-        document.getElementById('nav-kanban').onclick = () => showView(document.getElementById('kanban-view'));
-        document.getElementById('nav-news').onclick = () => showView(document.getElementById('news-view'));
-        document.getElementById('nav-freebies').onclick = () => showView(document.getElementById('freebies-view'));
-        document.getElementById('sync-ap-btn').onclick = fetchAP;
-        document.getElementById('sync-deals-btn').onclick = fetchFreebies;
-        document.getElementById('list-wiki-btn').onclick = () => showView(document.getElementById('wiki-list-view'));
-
-        const autoSaveTask = async () => { if(curTaskId && isEditing) { showSync(true); await updateDoc(doc(db, 'tasks', curTaskId), { text: document.getElementById('modal-title-display').value, label: document.getElementById('modal-label-select').value, notes: document.getElementById('modal-notes').value }); showSync(false); }};
-        document.getElementById('modal-notes').oninput = autoSaveTask;
-        document.getElementById('modal-title-display').oninput = autoSaveTask;
-        document.getElementById('modal-label-select').onchange = autoSaveTask;
-
-        const autoSaveWiki = async () => { if(curWikiId && isEditing) { showSync(true); await updateDoc(doc(db, 'wiki', curWikiId), { title: document.getElementById('wiki-title-display').value, content: document.getElementById('wiki-notes').value }); showSync(false); }};
-        document.getElementById('wiki-notes').oninput = autoSaveWiki;
-        document.getElementById('wiki-title-display').oninput = autoSaveWiki;
-
-        document.getElementById('task-mode-preview').onclick = (e) => { isEditing = false; document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value); document.getElementById('task-mode-edit').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
-        document.getElementById('task-mode-edit').onclick = (e) => { isEditing = true; document.getElementById('modal-notes').style.display='block'; document.getElementById('modal-preview').style.display='none'; document.getElementById('task-mode-preview').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
-        document.getElementById('wiki-mode-preview').onclick = (e) => { isEditing = false; document.getElementById('wiki-notes').style.display='none'; document.getElementById('wiki-preview').style.display='block'; document.getElementById('wiki-preview').innerHTML = marked.parse(document.getElementById('wiki-notes').value); document.getElementById('wiki-mode-edit').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
-        document.getElementById('wiki-mode-edit').onclick = (e) => { isEditing = true; document.getElementById('wiki-notes').style.display='block'; document.getElementById('wiki-preview').style.display='none'; document.getElementById('wiki-mode-preview').classList.remove('btn-active'); e.target.classList.add('btn-active'); };
-        document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
-        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
-        document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
     </script>
 </body>
 </html>
