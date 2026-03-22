@@ -22,7 +22,7 @@
             --c-bg: #064e3b; --c-txt: #dcfce7; --u-bg: #7f1d1d; --u-txt: #fee2e2;
         }
 
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; flex-direction: column; }
         
         #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; opacity: 0; z-index: 9999; pointer-events: none; }
         #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
@@ -34,6 +34,8 @@
         .badge-church { background: var(--c-bg); color: var(--c-txt); }
         .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
 
+        #app-layout { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
+
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
         .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
@@ -42,15 +44,25 @@
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;}
         
-        /* Triage Styles */
         .news-card.read { opacity: 0.4; filter: grayscale(1); order: 1; }
         .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
 
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
 
+        /* Mobile Specific Elements */
+        #mobile-header { display: none; padding: 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); z-index: 1000; }
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
-        @media (max-width: 768px) { #sidebar { display: none; } #mobile-switcher { display: flex; } #main-content { padding-bottom: 70px; } }
+        .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 12px; font-weight: 700; opacity: 0.5; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .switch-btn.active { opacity: 1; color: var(--accent); }
+
+        @media (max-width: 768px) { 
+            #sidebar { display: none; } 
+            #mobile-header { display: block; }
+            #mobile-switcher { display: flex; } 
+            #main-content { padding-bottom: 70px; } 
+            .column { min-width: 85vw !important; } /* Better mobile swiping for Kanban */
+        }
     </style>
 </head>
 <body data-theme="dark">
@@ -63,7 +75,12 @@
         </div>
     </div>
 
-    <div id="app-container" style="display:none; width: 100%; height: 100vh;">
+    <div id="mobile-header">
+        <input type="text" id="mobile-search" placeholder="Search Workspace..." style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none; box-sizing:border-box;">
+        <div id="mobile-search-results" style="margin-top:10px; display:none; flex-direction:column; gap:5px; max-height:200px; overflow-y:auto; position:absolute; background:var(--card-bg); width:calc(100% - 30px); z-index:3000; box-shadow:0 10px 20px rgba(0,0,0,0.2); border-radius:8px; border:1px solid var(--border); padding:5px;"></div>
+    </div>
+
+    <div id="app-layout">
         <div id="sidebar">
             <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
                 <input type="text" id="sidebar-search" placeholder="Search Workspace..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none; box-sizing:border-box;">
@@ -85,7 +102,7 @@
 
         <div id="main-content">
             <div id="kanban-view" class="view-pane" style="display: flex;">
-                <div style="display:flex; gap:20px; height: 100%;">
+                <div style="display:flex; gap:20px; height: 100%; overflow-x: auto;">
                     <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" class="btn" style="padding:2px 8px;">+</button></div><div id="todo-list" style="min-height:50vh;"></div></div>
                     <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Doing</div><div id="doing-list" style="min-height:50vh;"></div></div>
                     <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" style="min-height:50vh;"></div></div>
@@ -106,6 +123,13 @@
                 <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
             </div>
         </div>
+    </div>
+
+    <div id="mobile-switcher">
+        <button class="switch-btn active" data-view="kanban-view"><span style="font-size:18px;">📊</span>BOARD</button>
+        <button class="switch-btn" data-view="news-view"><span style="font-size:18px;">📰</span>AP NEWS</button>
+        <button class="switch-btn" data-view="freebies-view"><span style="font-size:18px;">🎁</span>DEALS</button>
+        <button class="switch-btn" data-view="wiki-content-view"><span style="font-size:18px;">📄</span>WIKI</button>
     </div>
 
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
@@ -150,31 +174,36 @@
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- SEARCH BAR ---
-        document.getElementById('sidebar-search').oninput = (e) => {
-            const q = e.target.value.toLowerCase(); const res = document.getElementById('sidebar-search-results'); res.innerHTML = ''; 
+        // --- UNIFIED SEARCH LOGIC ---
+        const handleSearch = (e) => {
+            const q = e.target.value.toLowerCase(); 
+            const resId = e.target.id === 'sidebar-search' ? 'sidebar-search-results' : 'mobile-search-results';
+            const res = document.getElementById(resId); 
+            res.innerHTML = ''; 
             if(!q) { res.style.display = 'none'; return; }
             res.style.display = 'flex';
             [...allTasks.map(t=>({id:t.id,t:t.data().text,type:'TASK',d:t.data()})), ...allWiki.map(w=>({id:w.id,t:w.data().title,type:'WIKI',d:w.data()}))].forEach(i => {
                 if(i.t.toLowerCase().includes(q)) {
                     const div = document.createElement('div'); div.style = "padding:8px; background:var(--bg); border-radius:4px; font-size:12px; cursor:pointer;";
                     div.innerHTML = `<b>${i.t}</b> <span style="font-size:10px; color:#888; float:right;">${i.type}</span>`;
-                    div.onclick = () => { res.style.display='none'; document.getElementById('sidebar-search').value=''; if(i.type==='TASK') openTask(i.id,i.d); else openWiki(i.id,i.d); };
+                    div.onclick = () => { res.style.display='none'; e.target.value=''; if(i.type==='TASK') openTask(i.id,i.d); else openWiki(i.id,i.d); };
                     res.appendChild(div);
                 }
             });
         };
+        document.getElementById('sidebar-search').oninput = handleSearch;
+        document.getElementById('mobile-search').oninput = handleSearch;
 
-        // --- TRIAGE FUNCTION ---
+        // --- TRIAGE (MARK READ) ---
         async function toggleRead(link, read, card) {
             if (read) { if(!userReadList.includes(link)) userReadList.push(link); card.classList.add('read'); }
             else { userReadList = userReadList.filter(l => l !== link); card.classList.remove('read'); }
             if(auth.currentUser) await setDoc(doc(db, 'users', auth.currentUser.uid), { readArticles: userReadList }, { merge: true });
         }
 
-        // --- FIREBASE INIT ---
+        // --- DATA SNAPS ---
         onAuthStateChanged(auth, async (u) => {
-            if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='flex';
+            if(u) { document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='block';
                 const ud = await getDoc(doc(db, 'users', u.uid)); userReadList = ud.exists() ? ud.data().readArticles || [] : [];
                 fetchAP(); fetchFreebies();
             } else { document.getElementById('login-screen').style.display='flex'; }
@@ -231,7 +260,6 @@
                 const rawText = await r.text();
                 items = JSON.parse(rawText).data.children;
             } catch(e) {
-                // Fallback if Reddit blocks the Apps Script IP
                 try {
                     const fallback = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.reddit.com/r/freebies.json?limit=12')}`);
                     items = JSON.parse(await fallback.text()).data.children;
@@ -240,7 +268,6 @@
                     return;
                 }
             }
-            
             c.innerHTML = '';
             items.forEach(i => {
                 const p = i.data; const link = `https://reddit.com${p.permalink}`; const isRead = userReadList.includes(link);
@@ -309,9 +336,12 @@
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
         document.getElementById('logout-btn').onclick = () => signOut(auth);
         
-        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => { 
-            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
-            b.classList.add('active'); showView(b.getAttribute('data-view')); 
+        document.querySelectorAll('.nav-item[data-view], .switch-btn[data-view]').forEach(b => b.onclick = () => { 
+            document.querySelectorAll('.nav-item, .switch-btn').forEach(n=>n.classList.remove('active')); 
+            b.classList.add('active'); 
+            const corresponding = document.querySelector(`[data-view="${b.getAttribute('data-view')}"]`);
+            if(corresponding) corresponding.classList.add('active');
+            showView(b.getAttribute('data-view')); 
         });
     </script>
 </body>
