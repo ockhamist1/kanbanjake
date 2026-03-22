@@ -113,7 +113,7 @@
                 const ud = await getDoc(doc(db, 'users', u.uid));
                 userReadList = ud.exists() ? ud.data().readArticles || [] : [];
                 fetchAP(); fetchFreebies();
-            } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; }
+            } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.none; }
         });
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
@@ -124,27 +124,32 @@
         }
         window.fetchSource = async (cid, url, type) => {
             const container = document.getElementById(cid);
-            container.innerHTML = `<p>Syncing ${type}...</p>`;
+            container.innerHTML = `<p>Syncing ${type} signal...</p>`;
             const proxies = [
                 `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
                 `https://corsproxy.io/?${encodeURIComponent(url)}`,
                 `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
                 `https://thingproxy.freeboard.io/fetch/${url}`
             ];
-            let data = null;
+            let rawData = null;
             for (let proxy of proxies) {
                 try {
                     const res = await fetch(`${proxy}${proxy.includes('?') ? '&' : '?'}cb=${Date.now()}`);
                     if (res.ok) { 
-                        const raw = await res.json();
-                        data = raw.contents || raw;
-                        if (data) break;
+                        const contentType = res.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const json = await res.json();
+                            rawData = json.contents || json;
+                        } else {
+                            rawData = await res.text();
+                        }
+                        if (rawData) break;
                     }
                 } catch (e) { continue; }
             }
-            if (!data) { container.innerHTML = `<p style="color:red;">${type} Jammed. Try re-syncing.</p>`; return; }
+            if (!rawData) { container.innerHTML = `<p style="color:red;">${type} Jammed. Manual re-sync recommended.</p>`; return; }
             if (type === 'AP') {
-                const xml = new DOMParser().parseFromString(data, "text/xml");
+                const xml = new DOMParser().parseFromString(rawData, "text/xml");
                 const items = Array.from(xml.querySelectorAll("item"));
                 container.innerHTML = '';
                 items.forEach((item, i) => {
@@ -161,7 +166,7 @@
                     container.appendChild(card);
                 });
             } else {
-                const json = typeof data === 'string' ? JSON.parse(data) : data;
+                const json = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
                 const items = json.data?.children || [];
                 container.innerHTML = '';
                 items.forEach(item => {
