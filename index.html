@@ -209,7 +209,6 @@
         document.getElementById('mobile-search').oninput = handleSearch;
 
         // --- TROJAN HORSE PERSISTENCE ---
-        // We save to 'tasks/prefs_USERID' because we know Firebase allows you to write to the 'tasks' collection!
         async function toggleRead(link, read, card) {
             if (read) { if(!userReadList.includes(link)) userReadList.push(link); }
             else { userReadList = userReadList.filter(l => l !== link); }
@@ -232,6 +231,9 @@
                 if(link && userReadList.includes(link)) {
                     card.classList.add('read');
                     if(cb) cb.checked = true;
+                } else {
+                    card.classList.remove('read');
+                    if(cb) cb.checked = false;
                 }
             });
         }
@@ -248,7 +250,10 @@
                 
                 c.innerHTML = '';
                 items.forEach(i => {
-                    const link = i.querySelector("link").textContent; const isRead = userReadList.includes(link);
+                    const rawLink = i.querySelector("link").textContent; 
+                    const link = rawLink.split('?')[0];
+                    const isRead = userReadList.includes(link);
+                    
                     const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
                     div.setAttribute('data-link', link);
                     div.innerHTML = `<div><b>${i.querySelector("title").textContent}</b></div>
@@ -267,7 +272,6 @@
             const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing Deals...</p>';
             let items = [];
             
-            // Bypass Reddit JSON blocks by fetching the RSS feed instead via a public converter
             try {
                 const r2 = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.reddit.com/r/freebies/.rss')}`);
                 const data = await r2.json();
@@ -279,7 +283,10 @@
             
             c.innerHTML = '';
             items.slice(0,15).forEach(i => {
-                const link = i.link; const isRead = userReadList.includes(link);
+                const rawLink = i.link;
+                const link = rawLink.split('?')[0];
+                const isRead = userReadList.includes(link);
+                
                 const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
                 div.setAttribute('data-link', link);
                 div.innerHTML = `<div><b>${i.title}</b></div>
@@ -298,23 +305,20 @@
         onAuthStateChanged(auth, async (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
-                document.getElementById('app-container').style.display='flex';
+                document.getElementById('app-layout').style.display='flex';
                 
-                // 1. Fetch Local Storage Instantly
                 try {
                     const local = JSON.parse(localStorage.getItem('jakes_read_articles'));
                     if(Array.isArray(local)) userReadList = local;
                 } catch(e) {}
 
-                // 2. Fetch Feeds IMMEDIATELY (Do not wait for database)
                 window.fetchAP(); 
                 window.fetchFreebies();
 
-                // 3. Sync from the Trojan Horse 'tasks' document
                 if(profileUnsubscribe) profileUnsubscribe();
                 profileUnsubscribe = onSnapshot(doc(db, 'tasks', `prefs_${u.uid}`), (d) => {
                     if(d.exists() && d.data().readArticles) {
-                        userReadList = Array.from(new Set([...userReadList, ...d.data().readArticles]));
+                        userReadList = d.data().readArticles || [];
                         localStorage.setItem('jakes_read_articles', JSON.stringify(userReadList));
                         updateCardVisuals();
                     }
@@ -330,7 +334,6 @@
             ['todo','doing','done'].forEach(st => {
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
                 
-                // CRITICAL: Filter out our hidden preferences document so it doesn't show up as a task!
                 allTasks.filter(d => d.data().status === st && !d.id.startsWith('prefs_')).forEach(d => {
                     const t = d.data(); const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
                     card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label ? t.label.replace('-',' ') : ''}</div><div>${t.text}</div>`;
