@@ -18,5 +18,6 @@ jobs:
       - name: Run Scraper
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         run: node scripts/scrape_rates.js
