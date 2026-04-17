@@ -1,81 +1,88 @@
 const admin = require('firebase-admin');
 const axios = require('axios');
 
-const TUNNEL_URL = "https://script.google.com/macros/s/AKfycbzG2lQUiwgoU_TxitrLrpXTpF9nZw5LnJreMlhxM7qupa-Wpm94qlronU4wwje8kW-8/exec"; 
+// These pull from the "Secrets" you save in GitHub
+const SCRAPER_KEY = process.env.SCRAPER_API_KEY;
+const FIREBASE_KEY = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+if (!SCRAPER_KEY || !FIREBASE_KEY) {
+    console.error("Missing Secrets in GitHub Settings!");
     process.exit(1);
 }
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+// Initialize Firebase
+admin.initializeApp({ 
+    credential: admin.credential.cert(JSON.parse(FIREBASE_KEY)) 
+});
 const db = admin.firestore();
 
-// Snatches a number that looks like a mortgage rate (e.g., between 4.0 and 9.5)
-const grabRate = (text) => {
-    const matches = text.match(/(\d+\.\d+)/g);
-    if (!matches) return 0;
-    // Find the first number that isn't a "1" or "0" (likely a rate, not a footnote)
-    const rate = matches.find(n => parseFloat(n) > 3 && parseFloat(n) < 10);
-    return rate ? parseFloat(rate) : 0;
-};
+const LENDERS = [
+    { 
+        name: 'PenFed', 
+        url: 'https://www.penfed.org/mortgages/mortgage-rates/_jcr_content/root/container/main-container/mortgage_rate_table.model.json' 
+    },
+    { 
+        name: 'NFCU', 
+        url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates/_jcr_content/root/container/main/ratestable_copy.model.json' 
+    },
+    { 
+        name: 'Rocket', 
+        url: 'https://www.rocketmortgage.com/api/rates/mortgage' 
+    },
+    { 
+        name: 'USAA', 
+        url: 'https://www.usaa.com/banking/home-mortgages/rates/' 
+    }
+];
 
-async function scrapeLenders() {
+async function run() {
     const today = new Date().toISOString().split('T')[0];
     const results = [];
 
-    const lenders = [
-        { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
-        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
-        { name: 'Rocket', url: 'https://www.rocketmortgage.com/am-i-ready-to-buy/mortgage-rates' },
-        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
-    ];
-
-    for (const lender of lenders) {
+    for (const lender of LENDERS) {
         console.log(`--- Fetching ${lender.name} ---`);
         try {
-            // Increased timeout to 60 seconds
-            const response = await axios.get(`${TUNNEL_URL}?url=${encodeURIComponent(lender.url)}`, { timeout: 60000 });
-            const html = response.data;
+            // We use ScraperAPI with render=true to ensure JavaScript-heavy rates load
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true`;
+            const response = await axios.get(proxyUrl, { timeout: 60000 });
+            
+            // We convert the data to a string to search for rate patterns (e.g., 6.125)
+            const dataString = JSON.stringify(response.data);
+            
+            // Regex: Find a decimal number between 4 and 9 (typical rates)
+            const rateMatch = dataString.match(/([5-8]\.\d{2,3})/); 
 
-            const products = [
-                { type: '30yr VA', patterns: [/VA[^\d]{1,100}(\d+\.\d+)%/i, /Veteran[^\d]{1,100}(\d+\.\d+)%/i] },
-                { type: '30yr Conv', patterns: [/30-Year Fixed[^\d]{1,100}(\d+\.\d+)%/i, /Conventional[^\d]{1,100}(\d+\.\d+)%/i] }
-            ];
-
-            for (const prod of products) {
-                let foundRate = 0;
-                for (const pattern of prod.patterns) {
-                    const match = html.match(pattern);
-                    if (match) {
-                        const val = grabRate(match[0]);
-                        if (val > 0) { foundRate = val; break; }
-                    }
-                }
-
-                if (foundRate > 0) {
-                    results.push({
-                        lender: lender.name, product: prod.type, date: today,
-                        rate: foundRate, apr: foundRate + 0.2, points: 0,
-                        timestamp: admin.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log(`✅ ${lender.name} ${prod.type}: ${foundRate}%`);
-                }
+            if (rateMatch) {
+                const rate = parseFloat(rateMatch[1]);
+                results.push({
+                    lender: lender.name,
+                    product: '30yr Conv',
+                    date: today,
+                    rate: rate,
+                    apr: rate + 0.18, // Estimated APR offset
+                    points: 0,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp()
+                });
+                console.log(`✅ ${lender.name}: Successfully found rate of ${rate}%`);
+            } else {
+                console.warn(`⚠️ ${lender.name}: Page fetched, but no valid rates found in the data.`);
             }
         } catch (err) {
-            console.error(`❌ ${lender.name} Error: ${err.message}`);
+            console.error(`❌ ${lender.name} Failed: ${err.message}`);
         }
     }
 
     if (results.length > 0) {
         const batch = db.batch();
         results.forEach(res => {
-            const docId = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
-            batch.set(db.collection('mortgage_rates').doc(docId), res);
+            const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
+            batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(`Database updated with ${results.length} records.`);
+        console.log(`Success! Saved ${results.length} lender updates to Firebase.`);
+    } else {
+        console.error("No data saved. Check ScraperAPI credits or lender URLs.");
     }
 }
 
-scrapeLenders();
+run();
