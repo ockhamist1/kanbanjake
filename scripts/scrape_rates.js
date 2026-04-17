@@ -1,11 +1,9 @@
 const admin = require('firebase-admin');
 const axios = require('axios');
 
-// Your Google Apps Script Tunnel URL
 const TUNNEL_URL = "https://script.google.com/macros/s/AKfycbzG2lQUiwgoU_TxitrLrpXTpF9nZw5LnJreMlhxM7qupa-Wpm94qlronU4wwje8kW-8/exec"; 
 
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    console.error("Missing FIREBASE_SERVICE_ACCOUNT secret!");
     process.exit(1);
 }
 
@@ -13,10 +11,13 @@ const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 const db = admin.firestore();
 
-// Helper to extract the number from strings like "6.125%"
-const grabNum = (text) => {
-    const match = text.match(/(\d+\.\d+)/);
-    return match ? parseFloat(match[1]) : 0;
+// Snatches a number that looks like a mortgage rate (e.g., between 4.0 and 9.5)
+const grabRate = (text) => {
+    const matches = text.match(/(\d+\.\d+)/g);
+    if (!matches) return 0;
+    // Find the first number that isn't a "1" or "0" (likely a rate, not a footnote)
+    const rate = matches.find(n => parseFloat(n) > 3 && parseFloat(n) < 10);
+    return rate ? parseFloat(rate) : 0;
 };
 
 async function scrapeLenders() {
@@ -31,57 +32,50 @@ async function scrapeLenders() {
     ];
 
     for (const lender of lenders) {
-        console.log(`--- Fetching ${lender.name} via Google Tunnel ---`);
+        console.log(`--- Fetching ${lender.name} ---`);
         try {
-            // We route the request through your Google Apps Script
-            const response = await axios.get(`${TUNNEL_URL}?url=${encodeURIComponent(lender.url)}`, { timeout: 30000 });
+            // Increased timeout to 60 seconds
+            const response = await axios.get(`${TUNNEL_URL}?url=${encodeURIComponent(lender.url)}`, { timeout: 60000 });
             const html = response.data;
 
-            // Using Regex to find common rate patterns in the HTML source
-            const vaMatch = html.match(/VA[^\d]{1,50}(\d+\.\d+)%/i);
-            const convMatch = html.match(/30-Year Fixed[^\d]{1,50}(\d+\.\d+)%/i) || html.match(/Conventional[^\d]{1,50}(\d+\.\d+)%/i);
+            const products = [
+                { type: '30yr VA', patterns: [/VA[^\d]{1,100}(\d+\.\d+)%/i, /Veteran[^\d]{1,100}(\d+\.\d+)%/i] },
+                { type: '30yr Conv', patterns: [/30-Year Fixed[^\d]{1,100}(\d+\.\d+)%/i, /Conventional[^\d]{1,100}(\d+\.\d+)%/i] }
+            ];
 
-            if (vaMatch && vaMatch[1]) {
-                const rate = grabNum(vaMatch[1]);
-                results.push({
-                    lender: lender.name, product: '30yr VA', date: today,
-                    rate: rate, apr: rate + 0.18, points: 0,
-                    timestamp: admin.firestore.FieldValue.serverTimestamp()
-                });
-                console.log(`✅ Found VA: ${rate}%`);
+            for (const prod of products) {
+                let foundRate = 0;
+                for (const pattern of prod.patterns) {
+                    const match = html.match(pattern);
+                    if (match) {
+                        const val = grabRate(match[0]);
+                        if (val > 0) { foundRate = val; break; }
+                    }
+                }
+
+                if (foundRate > 0) {
+                    results.push({
+                        lender: lender.name, product: prod.type, date: today,
+                        rate: foundRate, apr: foundRate + 0.2, points: 0,
+                        timestamp: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log(`✅ ${lender.name} ${prod.type}: ${foundRate}%`);
+                }
             }
-
-            if (convMatch && convMatch[1]) {
-                const rate = grabNum(convMatch[1]);
-                results.push({
-                    lender: lender.name, product: '30yr Conv', date: today,
-                    rate: rate, apr: rate + 0.22, points: 0,
-                    timestamp: admin.firestore.FieldValue.serverTimestamp()
-                });
-                console.log(`✅ Found Conv: ${rate}%`);
-            }
-
-            if (!vaMatch && !convMatch) {
-                console.warn(`⚠️ Warning: No rates found in the HTML for ${lender.name}.`);
-            }
-
         } catch (err) {
-            console.error(`❌ ${lender.name} Tunnel Error: ${err.message}`);
+            console.error(`❌ ${lender.name} Error: ${err.message}`);
         }
     }
 
     if (results.length > 0) {
-        console.log(`Pushing ${results.length} updates to Firestore...`);
         const batch = db.batch();
         results.forEach(res => {
             const docId = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(docId), res);
         });
         await batch.commit();
-        console.log("Database successfully updated.");
-    } else {
-        console.error("Final Result: No rates found at all. Check Google Tunnel logs.");
+        console.log(`Database updated with ${results.length} records.`);
     }
 }
 
-scrapeLenders().catch(console.error);
+scrapeLenders();
