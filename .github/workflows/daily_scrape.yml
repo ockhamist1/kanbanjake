@@ -1,20 +1,22 @@
 name: Daily Mortgage Scrape
 on:
   schedule:
-    # This is UTC time. 13:00 UTC is 6:00 AM MST (Peoria time).
     - cron: '0 13 * * *' 
-  workflow_dispatch: # This adds a "Run manually" button for testing
+  workflow_dispatch: 
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    # This line tells GitHub to use the newer engine to fix the warning
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # Updated from 20 to 24
 
       - name: Install dependencies
         run: |
@@ -23,6 +25,5 @@ jobs:
 
       - name: Run Scraper
         env:
-          # This pulls your secret key from the GitHub Vault
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node scripts/scrape_rates.js
