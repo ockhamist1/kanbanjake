@@ -7,6 +7,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root { 
@@ -44,7 +45,6 @@
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;}
         
-        /* Triage Read Status */
         .news-card.read { opacity: 0.3; filter: grayscale(1); order: 1; }
         .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
         .read-toggle:hover { color: var(--text); }
@@ -54,7 +54,7 @@
 
         /* Mobile Specifics */
         .mobile-only { display: none; }
-        #mobile-header { display: none; padding: 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); z-index: 1000; position: relative; }
+        #mobile-header { display: block; padding: 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); z-index: 1000; position: relative; }
         #mobile-switcher { display: none; position: fixed; bottom: 0; width: 100%; background: var(--sidebar); border-top: 1px solid var(--border); height: 65px; z-index: 2000; justify-content: space-around; align-items: center; }
         .switch-btn { background: none; border: none; color: var(--text); cursor: pointer; text-align: center; font-size: 11px; font-weight: 700; opacity: 0.5; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .switch-btn.active { opacity: 1; color: var(--accent); }
@@ -93,8 +93,10 @@
 
             <div style="font-size:11px; font-weight:800; color:#888; margin-bottom:10px;">WORKSPACE</div>
             <button class="nav-item active" data-view="kanban-view">📊 Board</button>
+            <button class="nav-item" data-view="rates-view">📈 Rate Intel</button>
             <button class="nav-item" data-view="news-view">📰 News</button>
             <button class="nav-item" data-view="freebies-view">🎁 Deals</button>
+            
             <div style="font-size:11px; font-weight:800; color:#888; margin:20px 0 10px 0;">WIKI</div>
             <div id="sidebar-wiki-list"></div>
             <button id="add-wiki-btn" class="nav-item" style="border:1px dashed #888; color:#888; text-align:center; margin-top:10px;">+ New Page</button>
@@ -113,6 +115,23 @@
                 </div>
             </div>
             
+            <div id="rates-view" class="view-pane">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2>Mortgage Rate Intelligence</h2>
+                    <div style="font-size: 11px; font-weight: 800; color: #888;">DAILY MARKET SNAPSHOT</div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                    <div class="card" style="padding: 20px; height: 450px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">30-Year Conventional Fixed</h3>
+                        <div style="flex-grow:1; position:relative;"><canvas id="convChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: 20px; height: 450px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">30-Year VA Fixed</h3>
+                        <div style="flex-grow:1; position:relative;"><canvas id="vaChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="news-view" class="view-pane">
                 <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button></div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
@@ -140,8 +159,8 @@
 
     <div id="mobile-switcher">
         <button class="switch-btn active" data-view="kanban-view"><span style="font-size:18px;">📊</span>BOARD</button>
-        <button class="switch-btn" data-view="news-view"><span style="font-size:18px;">📰</span>AP NEWS</button>
-        <button class="switch-btn" data-view="freebies-view"><span style="font-size:18px;">🎁</span>DEALS</button>
+        <button class="switch-btn" data-view="rates-view"><span style="font-size:18px;">📈</span>RATES</button>
+        <button class="switch-btn" data-view="news-view"><span style="font-size:18px;">📰</span>NEWS</button>
         <button class="switch-btn" data-view="wiki-list-view"><span style="font-size:18px;">📄</span>WIKI</button>
     </div>
 
@@ -173,7 +192,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, getDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwu5RAU-OOlPyUF7O5YYw06upX_V7yl_uDpBiZea342_smkuJUkCKFKBgGJaVLGb4i_rw/exec"; 
@@ -182,13 +201,75 @@
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         
         let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], isEditing = false, userReadList = [];
+        let convChart, vaChart;
 
         // --- THEME ---
         const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- UNIFIED SEARCH LOGIC ---
+        // --- MORTGAGE RATE LOGIC ---
+        function initRateCharts() {
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#888', font: { size: 10, weight: 'bold' } } },
+                    tooltip: {
+                        backgroundColor: 'rgba(30, 30, 30, 0.9)',
+                        callbacks: {
+                            label: function(context) {
+                                const d = context.raw;
+                                return [
+                                    `${context.dataset.label} Rate: ${d.y}%`,
+                                    `APR: ${d.apr}%`,
+                                    `Points: ${d.points}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => v + '%' } },
+                    x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+                }
+            };
+
+            convChart = new Chart(document.getElementById('convChart'), { type: 'line', data: { datasets: [] }, options: commonOptions });
+            vaChart = new Chart(document.getElementById('vaChart'), { type: 'line', data: { datasets: [] }, options: commonOptions });
+        }
+
+        function loadRateData() {
+            const q = query(collection(db, "mortgage_rates"), orderBy("date", "asc"));
+            onSnapshot(q, (snapshot) => {
+                const data = snapshot.docs.map(doc => doc.data());
+                updateChart(convChart, data, "30yr Conv");
+                updateChart(vaChart, data, "30yr VA");
+            });
+        }
+
+        function updateChart(chart, allData, productType) {
+            const lenders = ["PenFed", "NFCU", "Rocket", "USAA"];
+            const colors = ["#4338ca", "#22c55e", "#ef4444", "#eab308"];
+            const productData = allData.filter(d => d.product === productType);
+            const labels = [...new Set(productData.map(d => d.date))];
+
+            chart.data.labels = labels;
+            chart.data.datasets = lenders.map((lender, i) => ({
+                label: lender,
+                data: labels.map(date => {
+                    const e = productData.find(d => d.date === date && d.lender === lender);
+                    return e ? { x: date, y: e.rate, apr: e.apr, points: e.points } : null;
+                }),
+                borderColor: colors[i],
+                backgroundColor: colors[i],
+                tension: 0.3,
+                borderWidth: 2
+            }));
+            chart.update();
+        }
+
+        // --- SEARCH & WIDGETS ---
         const handleSearch = (e) => {
             const q = e.target.value.toLowerCase(); 
             const resId = e.target.id === 'sidebar-search' ? 'sidebar-search-results' : 'mobile-search-results';
@@ -208,60 +289,27 @@
         document.getElementById('sidebar-search').oninput = handleSearch;
         document.getElementById('mobile-search').oninput = handleSearch;
 
-        // --- TROJAN HORSE PERSISTENCE ---
         async function toggleRead(link, read, card) {
             if (read) { if(!userReadList.includes(link)) userReadList.push(link); }
             else { userReadList = userReadList.filter(l => l !== link); }
-            
-            if(userReadList.length > 200) userReadList = userReadList.slice(-200);
-            
             localStorage.setItem('jakes_read_articles', JSON.stringify(userReadList));
             card.classList.toggle('read', read);
-
-            if(auth.currentUser) {
-                try { await setDoc(doc(db, 'tasks', `prefs_${auth.currentUser.uid}`), { readArticles: userReadList }, { merge: true }); } 
-                catch(e) { console.error("Could not sync preference doc."); }
-            }
+            if(auth.currentUser) await setDoc(doc(db, 'tasks', `prefs_${auth.currentUser.uid}`), { readArticles: userReadList }, { merge: true });
         }
 
-        function updateCardVisuals() {
-            document.querySelectorAll('.news-card').forEach(card => {
-                const link = card.getAttribute('data-link');
-                const cb = card.querySelector('input[type="checkbox"]');
-                if(link && userReadList.includes(link)) {
-                    card.classList.add('read');
-                    if(cb) cb.checked = true;
-                } else {
-                    card.classList.remove('read');
-                    if(cb) cb.checked = false;
-                }
-            });
-        }
-
-        // --- BOMB-PROOF WIDGETS ---
         window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing AP News...</p>';
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing...</p>';
             try {
                 const r = await fetch(`${WEB_APP_URL}?feed=ap`);
-                const rawXml = await r.text();
-                if(rawXml.includes("Fetch error:") || rawXml.includes("<html")) throw new Error();
-                const xml = new DOMParser().parseFromString(rawXml, "text/xml"); 
+                const xml = new DOMParser().parseFromString(await r.text(), "text/xml"); 
                 const items = Array.from(xml.querySelectorAll("item")).slice(0,15);
-                
                 c.innerHTML = '';
                 items.forEach(i => {
-                    const rawLink = i.querySelector("link").textContent; 
-                    const link = rawLink.split('?')[0];
+                    const link = i.querySelector("link").textContent.split('?')[0];
                     const isRead = userReadList.includes(link);
-                    
                     const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
-                    div.setAttribute('data-link', link);
-                    div.innerHTML = `<div><b>${i.querySelector("title").textContent}</b></div>
-                                     <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
-                    div.onclick = (e) => { 
-                        if(e.target.closest('.read-toggle') || e.target.tagName === 'INPUT') return; 
-                        window.open(link, '_blank'); 
-                    };
+                    div.innerHTML = `<div><b>${i.querySelector("title").textContent}</b></div><label class="read-toggle"><input type="checkbox" ${isRead?'checked':''}> Read</label>`;
+                    div.onclick = (e) => { if(!e.target.closest('.read-toggle')) window.open(link, '_blank'); };
                     div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
                     c.appendChild(div);
                 });
@@ -269,71 +317,42 @@
         };
 
         window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing Deals...</p>';
-            let items = [];
-            
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing...</p>';
             try {
-                const r2 = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.reddit.com/r/freebies/.rss')}`);
-                const data = await r2.json();
-                if(!data.items) throw new Error();
-                items = data.items.map(i => ({ title: i.title, link: i.link }));
-            } catch(e2) {
-                c.innerHTML = '<p style="color:red">Reddit RSS Signal Blocked.</p>'; return;
-            }
-            
-            c.innerHTML = '';
-            items.slice(0,15).forEach(i => {
-                const rawLink = i.link;
-                const link = rawLink.split('?')[0];
-                const isRead = userReadList.includes(link);
-                
-                const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
-                div.setAttribute('data-link', link);
-                div.innerHTML = `<div><b>${i.title}</b></div>
-                                 <label class="read-toggle"><input type="checkbox" ${isRead ? 'checked' : ''}> Mark Read</label>`;
-                div.onclick = (e) => { 
-                    if(e.target.closest('.read-toggle') || e.target.tagName === 'INPUT') return; 
-                    window.open(link, '_blank'); 
-                };
-                div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
-                c.appendChild(div);
-            });
+                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.reddit.com/r/freebies/.rss')}`);
+                const data = await r.json();
+                c.innerHTML = '';
+                data.items.slice(0,15).forEach(i => {
+                    const link = i.link.split('?')[0];
+                    const isRead = userReadList.includes(link);
+                    const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                    div.innerHTML = `<div><b>${i.title}</b></div><label class="read-toggle"><input type="checkbox" ${isRead?'checked':''}> Read</label>`;
+                    div.onclick = (e) => { if(!e.target.closest('.read-toggle')) window.open(link, '_blank'); };
+                    div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
+                    c.appendChild(div);
+                });
+            } catch(e) { c.innerHTML = '<p style="color:red">Reddit RSS Signal Blocked.</p>'; }
         };
 
-        // --- HARD-BOOT FIREBASE INIT ---
-        let profileUnsubscribe = null;
+        // --- FIREBASE INIT ---
         onAuthStateChanged(auth, async (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
                 document.getElementById('app-layout').style.display='flex';
-                
-                try {
-                    const local = JSON.parse(localStorage.getItem('jakes_read_articles'));
-                    if(Array.isArray(local)) userReadList = local;
-                } catch(e) {}
-
-                window.fetchAP(); 
-                window.fetchFreebies();
-
-                if(profileUnsubscribe) profileUnsubscribe();
-                profileUnsubscribe = onSnapshot(doc(db, 'tasks', `prefs_${u.uid}`), (d) => {
-                    if(d.exists() && d.data().readArticles) {
-                        userReadList = d.data().readArticles || [];
-                        localStorage.setItem('jakes_read_articles', JSON.stringify(userReadList));
-                        updateCardVisuals();
-                    }
+                window.fetchAP(); window.fetchFreebies();
+                onSnapshot(doc(db, 'tasks', `prefs_${u.uid}`), (d) => {
+                    if(d.exists()) { userReadList = d.data().readArticles || []; localStorage.setItem('jakes_read_articles', JSON.stringify(userReadList)); }
                 });
-
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
         
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
 
         onSnapshot(collection(db, "tasks"), (s) => {
             allTasks = s.docs; if(isEditing) return;
             ['todo','doing','done'].forEach(st => {
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
-                
                 allTasks.filter(d => d.data().status === st && !d.id.startsWith('prefs_')).forEach(d => {
                     const t = d.data(); const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
                     card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label ? t.label.replace('-',' ') : ''}</div><div>${t.text}</div>`;
@@ -349,18 +368,15 @@
             allWiki = s.docs; 
             const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
             const mList = document.getElementById('mobile-wiki-list'); mList.innerHTML = '';
-            
             s.docs.forEach(d => {
-                const btn = document.createElement('button'); btn.className = 'nav-item wiki-nav-btn'; btn.innerText = `📄 ${d.data().title}`; btn.setAttribute('data-id', d.id);
-                btn.onclick = () => openWiki(d.id, d.data()); sList.appendChild(btn);
-                
-                const mCard = document.createElement('div'); mCard.className = 'card'; mCard.innerHTML = `<div style="font-weight:700;">📄 ${d.data().title}</div>`; mCard.setAttribute('data-id', d.id);
-                mCard.onclick = () => openWiki(d.id, d.data()); mList.appendChild(mCard);
+                const btn = document.createElement('button'); btn.className = 'nav-item wiki-nav-btn'; btn.innerText = `📄 ${d.data().title}`; btn.onclick = () => openWiki(d.id, d.data()); sList.appendChild(btn);
+                const mCard = document.createElement('div'); mCard.className = 'card'; mCard.innerHTML = `<b>📄 ${d.data().title}</b>`; mCard.onclick = () => openWiki(d.id, d.data()); mList.appendChild(mCard);
             });
         });
 
         // --- ACTIONS & NAVIGATION ---
         window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
+        
         const openTask = (id, data) => { 
             curTaskId = id; isEditing = true; 
             document.getElementById('modal-title-display').value = data.text; 
@@ -377,22 +393,13 @@
             window.showView('wiki-content-view'); 
         };
         
-        document.getElementById('modal-label-select').onchange = async (e) => { 
-            if(curTaskId) {
-                document.getElementById('sync-indicator').classList.add('active');
-                await updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); 
-                document.getElementById('sync-indicator').classList.remove('active');
-            }
-        };
-        
+        document.getElementById('modal-label-select').onchange = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); };
         document.getElementById('modal-notes').oninput = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
-        document.getElementById('modal-title-display').oninput = async (e) => { if(curTaskId) await updateDoc(doc(db, 'tasks', curTaskId), { text: e.target.value }); };
-        document.getElementById('wiki-title-display').oninput = async (e) => { if(curWikiId) await updateDoc(doc(db, 'wiki', curWikiId), { title: e.target.value }); };
         document.getElementById('wiki-notes').oninput = async (e) => { if(curWikiId) await updateDoc(doc(db, 'wiki', curWikiId), { content: e.target.value }); };
         
         document.getElementById('task-mode-preview').onclick = () => { 
             document.getElementById('modal-notes').style.display='none'; document.getElementById('modal-preview').style.display='block'; 
-            document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value || 'No notes yet.'); 
+            document.getElementById('modal-preview').innerHTML = marked.parse(document.getElementById('modal-notes').value || ''); 
             document.getElementById('task-mode-preview').classList.add('btn-active'); document.getElementById('task-mode-edit').classList.remove('btn-active');
         };
         document.getElementById('task-mode-edit').onclick = () => { 
@@ -400,28 +407,15 @@
             document.getElementById('task-mode-edit').classList.add('btn-active'); document.getElementById('task-mode-preview').classList.remove('btn-active');
         };
 
-        document.getElementById('wiki-mode-preview').onclick = () => { 
-            document.getElementById('wiki-notes').style.display='none'; document.getElementById('wiki-preview').style.display='block'; 
-            document.getElementById('wiki-preview').innerHTML = marked.parse(document.getElementById('wiki-notes').value || 'No notes yet.'); 
-            document.getElementById('wiki-mode-preview').classList.add('btn-active'); document.getElementById('wiki-mode-edit').classList.remove('btn-active');
-        };
-        document.getElementById('wiki-mode-edit').onclick = () => { 
-            document.getElementById('wiki-notes').style.display='block'; document.getElementById('wiki-preview').style.display='none'; 
-            document.getElementById('wiki-mode-edit').classList.add('btn-active'); document.getElementById('wiki-mode-preview').classList.remove('btn-active');
-        };
-        
         document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
-        document.getElementById('add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
-        document.getElementById('mobile-add-wiki-btn').onclick = () => { const t = prompt("Title?"); if(t) addDoc(collection(db, "wiki"), { title: t, content: '' }); };
         document.getElementById('close-modal').onclick = () => { document.getElementById('editor-modal').style.display='none'; isEditing = false; };
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
         
         document.querySelectorAll('.nav-item[data-view], .switch-btn[data-view]').forEach(b => b.onclick = () => { 
+            const vid = b.getAttribute('data-view');
             document.querySelectorAll('.nav-item, .switch-btn').forEach(n=>n.classList.remove('active')); 
             b.classList.add('active'); 
-            const corresponding = document.querySelector(`[data-view="${b.getAttribute('data-view')}"]`);
-            if(corresponding) corresponding.classList.add('active');
-            window.showView(b.getAttribute('data-view')); 
+            window.showView(vid); 
+            if(vid === 'rates-view' && !convChart) { initRateCharts(); loadRateData(); }
         });
     </script>
 </body>
