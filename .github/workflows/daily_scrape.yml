@@ -1,5 +1,4 @@
 name: Daily Mortgage Scrape
-
 on:
   schedule:
     - cron: '0 13 * * *' 
@@ -9,19 +8,13 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v4
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Install Dependencies
-        run: |
-          npm install playwright firebase-admin
-          npx playwright install chromium
-
+        run: npm install axios firebase-admin
       - name: Run Scraper
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
