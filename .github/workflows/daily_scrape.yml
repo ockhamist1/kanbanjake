@@ -1,0 +1,28 @@
+name: Daily Mortgage Scrape
+on:
+  schedule:
+    # This is UTC time. 13:00 UTC is 6:00 AM MST (Peoria time).
+    - cron: '0 13 * * *' 
+  workflow_dispatch: # This adds a "Run manually" button for testing
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install playwright firebase-admin
+          npx playwright install chromium
+
+      - name: Run Scraper
+        env:
+          # This pulls your secret key from the GitHub Vault
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/scrape_rates.js
