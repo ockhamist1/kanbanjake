@@ -1,25 +1,91 @@
-name: Daily Mortgage Scrape
-on:
-  schedule:
-    - cron: '0 13 * * *' 
-  workflow_dispatch: 
+const { chromium } = require('playwright');
+const admin = require('firebase-admin');
 
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Install dependencies
-        run: |
-          npm install playwright firebase-admin
-          npx playwright install chromium
-      - name: Run Scraper
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node scripts/scrape_rates.js
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.error("Missing FIREBASE_SERVICE_ACCOUNT secret!");
+    process.exit(1);
+}
+
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+const db = admin.firestore();
+
+// Helper to find numbers in a string (e.g., "6.125%" -> 6.125)
+const grabNum = (text) => {
+    const match = text.match(/(\d+\.\d+)/);
+    return match ? parseFloat(match[1]) : 0;
+};
+
+async function scrapeLenders() {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    const today = new Date().toISOString().split('T')[0];
+    const results = [];
+
+    const lenders = [
+        { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
+        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
+        { name: 'Rocket', url: 'https://www.rocketmortgage.com/am-i-ready-to-buy/mortgage-rates' },
+        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
+    ];
+
+    for (const lender of lenders) {
+        console.log(`--- Checking ${lender.name} ---`);
+        try {
+            await page.goto(lender.url, { waitUntil: 'networkidle', timeout: 60000 });
+            await page.waitForTimeout(5000); // Give JS extra time to load rates
+
+            const products = [
+                { type: '30yr VA', keywords: ['VA', 'Veteran'] },
+                { type: '30yr Conv', keywords: ['30-Year Fixed', '30-Yr Fixed', 'Conventional'] }
+            ];
+
+            for (const prod of products) {
+                // NEW LOGIC: Look for any table row or div containing the keywords
+                const locator = page.locator(`tr:has-text("${prod.keywords[0]}"), div:has-text("${prod.keywords[0]}")`).first();
+                
+                if (await locator.count() > 0) {
+                    const content = await locator.innerText();
+                    console.log(`Found content for ${prod.type}: ${content.replace(/\n/g, ' ')}`);
+
+                    // Try to find Rate and APR in the text block
+                    const numbers = content.match(/(\d+\.\d+)%/g); 
+                    
+                    if (numbers && numbers.length >= 2) {
+                        const rate = grabNum(numbers[0]);
+                        const apr = grabNum(numbers[1]);
+                        
+                        results.push({
+                            lender: lender.name,
+                            product: prod.type,
+                            date: today,
+                            rate: rate,
+                            apr: apr,
+                            points: 0, // Points are the hardest to find; keeping at 0 for now to ensure rate works
+                            timestamp: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log(`✅ Success: ${lender.name} ${prod.type} is ${rate}%`);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error(`❌ Failed ${lender.name}: ${err.message}`);
+        }
+    }
+
+    if (results.length > 0) {
+        console.log(`Pushing ${results.length} updates to Firestore...`);
+        const batch = db.batch();
+        results.forEach(res => {
+            const docId = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
+            batch.set(db.collection('mortgage_rates').doc(docId), res);
+        });
+        await batch.commit();
+    } else {
+        console.error("Final Result: No rates found at all. Sites might be blocking the headless browser.");
+    }
+
+    await browser.close();
+}
+
+scrapeLenders();
