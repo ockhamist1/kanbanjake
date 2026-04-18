@@ -14,6 +14,12 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
+// Helper to find the first real rate (5-8%) in a string
+const extractValue = (text, regex) => {
+    const match = text.match(regex);
+    return match ? parseFloat(match[1]) : 0;
+};
+
 const LENDERS = [
     { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
     { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
@@ -28,31 +34,48 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`--- Fetching ${lender.name} ---`);
         try {
-            // render=true is key here: it waits for the bank's JS to finish
+            // Using render=true to let tables build
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true`;
-            const response = await axios.get(proxyUrl, { timeout: 90000 }); // Increased timeout for heavy JS pages
-            
-            const html = JSON.stringify(response.data);
-            
-            // This Regex looks for a rate (e.g., 6.375 or 7.12) near the word "30" or "VA"
-            // We search for a decimal number between 4.0 and 9.0
-            const rateMatch = html.match(/([4-8]\.\d{2,3})/g); 
+            const response = await axios.get(proxyUrl, { timeout: 90000 });
+            const html = response.data;
 
-            if (rateMatch && rateMatch.length > 0) {
-                // We take the first sensible rate found on the page
-                const rate = parseFloat(rateMatch[0]);
-                results.push({
-                    lender: lender.name,
-                    product: '30yr Conv',
-                    date: today,
-                    rate: rate,
-                    apr: rate + 0.21, 
-                    points: 0,
-                    timestamp: admin.firestore.FieldValue.serverTimestamp()
-                });
-                console.log(`✅ ${lender.name}: Found ${rate}%`);
-            } else {
-                console.warn(`⚠️ ${lender.name}: No rate pattern found in page content.`);
+            const productConfigs = [
+                { type: '30yr Conv', keywords: ['Conventional', '30-Year Fixed', '30-Yr Fixed'] },
+                { type: '30yr VA', keywords: ['VA Loan', 'VA Fixed', 'Veteran'] }
+            ];
+
+            for (const prod of productConfigs) {
+                // Find a block of text starting with the keyword
+                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,300}`, 'i');
+                const blockMatch = html.match(regex);
+
+                if (blockMatch) {
+                    const block = blockMatch[0];
+                    
+                    // 1. Extract Rate (Looks for X.XXX%)
+                    const rate = extractValue(block, /Interest Rate[^\d]{1,10}(\d+\.\d+)%/i) || 
+                                 extractValue(block, /(\d+\.\d+)%/i);
+                    
+                    // 2. Extract APR (Looks for APR [num]%)
+                    const apr = extractValue(block, /APR[^\d]{1,10}(\d+\.\d+)%/i) || (rate > 0 ? rate + 0.21 : 0);
+
+                    // 3. Extract Points (Looks for [num] points)
+                    const points = extractValue(block, /Points[^\d]{1,10}(\d+\.\d+)/i) || 
+                                   extractValue(block, /([0-1]\.\d{2,3})/); // Likely a 0.XXX points value
+
+                    if (rate > 4 && rate < 9) { // Sanity check to ignore footnotes
+                        results.push({
+                            lender: lender.name,
+                            product: prod.type,
+                            date: today,
+                            rate: rate,
+                            apr: apr,
+                            points: points,
+                            timestamp: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log(`✅ ${lender.name} ${prod.type}: ${rate}% | APR: ${apr}% | Points: ${points}`);
+                    }
+                }
             }
         } catch (err) {
             console.error(`❌ ${lender.name} Failed: ${err.message}`);
@@ -66,7 +89,7 @@ async function run() {
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(`Success! Saved ${results.length} lenders.`);
+        console.log(`Success! Saved ${results.length} records to Firebase.`);
     }
 }
 
