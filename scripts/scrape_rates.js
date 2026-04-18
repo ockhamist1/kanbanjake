@@ -14,10 +14,15 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Helper to find the first real rate (5-8%) in a string
-const extractValue = (text, regex) => {
-    const match = text.match(regex);
-    return match ? parseFloat(match[1]) : 0;
+// Helper to find a number in a string within a specific range
+const findRateInRange = (text, min, max) => {
+    const matches = text.match(/(\d+\.\d+)/g);
+    if (!matches) return 0;
+    const found = matches.find(n => {
+        const val = parseFloat(n);
+        return val >= min && val <= max;
+    });
+    return found ? parseFloat(found) : 0;
 };
 
 const LENDERS = [
@@ -34,36 +39,52 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`--- Fetching ${lender.name} ---`);
         try {
-            // Using render=true to let tables build
+            // Using render=true but with a shorter timeout to prevent hanging
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true`;
-            const response = await axios.get(proxyUrl, { timeout: 90000 });
+            const response = await axios.get(proxyUrl, { timeout: 60000 });
             const html = response.data;
 
             const productConfigs = [
-                { type: '30yr Conv', keywords: ['Conventional', '30-Year Fixed', '30-Yr Fixed'] },
-                { type: '30yr VA', keywords: ['VA Loan', 'VA Fixed', 'Veteran'] }
+                { type: '30yr Conv', keywords: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
+                { type: '30yr VA', keywords: ['VA Fixed', '30-Year VA', '30 Year VA'] }
             ];
 
             for (const prod of productConfigs) {
-                // Find a block of text starting with the keyword
-                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,300}`, 'i');
-                const blockMatch = html.match(regex);
+                // Find the section of the page mentioning the product
+                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,500}`, 'i');
+                const match = html.match(regex);
 
-                if (blockMatch) {
-                    const block = blockMatch[0];
+                if (match) {
+                    const block = match[0];
+                    console.log(`Found block for ${lender.name} ${prod.type}: ${block.substring(0, 100)}...`);
+
+                    // 1. Rate: Look for numbers between 5% and 9%
+                    const rate = findRateInRange(block, 5.0, 9.0);
                     
-                    // 1. Extract Rate (Looks for X.XXX%)
-                    const rate = extractValue(block, /Interest Rate[^\d]{1,10}(\d+\.\d+)%/i) || 
-                                 extractValue(block, /(\d+\.\d+)%/i);
-                    
-                    // 2. Extract APR (Looks for APR [num]%)
-                    const apr = extractValue(block, /APR[^\d]{1,10}(\d+\.\d+)%/i) || (rate > 0 ? rate + 0.21 : 0);
+                    // 2. Points: Look for numbers between 0.0 and 3.0 (Points are usually low)
+                    // We look for the word "Points" first
+                    let points = 0;
+                    const pointsMatch = block.match(/points[^\d]{1,20}(\d+\.\d+)/i);
+                    if (pointsMatch) {
+                        points = parseFloat(pointsMatch[1]);
+                    } else {
+                        // Fallback: Find the first small decimal that isn't the rate
+                        const smallDecimals = block.match(/(\d+\.\d+)/g);
+                        if (smallDecimals) {
+                            const p = smallDecimals.find(n => parseFloat(n) > 0 && parseFloat(n) < 3.0);
+                            points = p ? parseFloat(p) : 0;
+                        }
+                    }
 
-                    // 3. Extract Points (Looks for [num] points)
-                    const points = extractValue(block, /Points[^\d]{1,10}(\d+\.\d+)/i) || 
-                                   extractValue(block, /([0-1]\.\d{2,3})/); // Likely a 0.XXX points value
+                    // 3. APR: Usually the second number in the 5-9% range
+                    let apr = 0;
+                    const aprMatches = block.match(/(\d+\.\d+)/g);
+                    if (aprMatches) {
+                        const possibleAPRs = aprMatches.filter(n => parseFloat(n) >= rate && parseFloat(n) < 10);
+                        apr = possibleAPRs.length > 1 ? parseFloat(possibleAPRs[1]) : rate + 0.15;
+                    }
 
-                    if (rate > 4 && rate < 9) { // Sanity check to ignore footnotes
+                    if (rate > 0) {
                         results.push({
                             lender: lender.name,
                             product: prod.type,
@@ -73,8 +94,10 @@ async function run() {
                             points: points,
                             timestamp: admin.firestore.FieldValue.serverTimestamp()
                         });
-                        console.log(`✅ ${lender.name} ${prod.type}: ${rate}% | APR: ${apr}% | Points: ${points}`);
+                        console.log(`✅ ${lender.name} ${prod.type}: Rate ${rate}% | APR ${apr}% | Points ${points}`);
                     }
+                } else {
+                    console.warn(`⚠️ ${lender.name}: Could not find keywords for ${prod.type}`);
                 }
             }
         } catch (err) {
@@ -89,8 +112,8 @@ async function run() {
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(`Success! Saved ${results.length} records to Firebase.`);
+        console.log(`Success! Saved ${results.length} updates.`);
     }
 }
 
-run();
+run().catch(err => console.error("GLOBAL ERROR:", err));
