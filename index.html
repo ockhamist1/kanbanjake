@@ -1,197 +1,48 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jake's Workspace</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        :root { 
-            --bg: #f7f7f5; --text: #37352f; --sidebar: #ebebec; --border: #e0e0e0; 
-            --card-bg: #ffffff; --accent: #4338ca; --nav-hover: rgba(0,0,0,0.05);
-            --m-bg: #dbeafe; --m-txt: #1e40af; --s-bg: #fef9c3; --s-txt: #854d0e;
-            --c-bg: #dcfce7; --c-txt: #166534; --u-bg: #fee2e2; --u-txt: #991b1b;
-        }
-        [data-theme="dark"] { 
-            --bg: #121212; --text: #e0e0e0; --sidebar: #1e1e1e; --border: #333; 
-            --card-bg: #1e1e1e; --accent: #818cf8; --nav-hover: rgba(255,255,255,0.05);
-            --m-bg: #1e3a8a; --m-txt: #dbeafe; --s-bg: #713f12; --s-txt: #fef9c3;
-            --c-bg: #064e3b; --c-txt: #dcfce7; --u-bg: #7f1d1d; --u-txt: #fee2e2;
-        }
-
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; flex-direction: column; }
-        
-        #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; opacity: 0; z-index: 9999; pointer-events: none; }
-        #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-
-        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
-        .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
-        .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
-        .badge-church { background: var(--c-bg); color: var(--c-txt); }
-        .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
-
-        #app-layout { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
-
-        #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
-        .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
-        .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
-
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;}
-        
-        .news-card.read { opacity: 0.3; filter: grayscale(1); order: 1; }
-        .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
-        .read-toggle:hover { color: var(--text); }
-
-        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
-        .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
-
-        @media (max-width: 768px) { 
-            #sidebar { display: none; } 
-            #mobile-header { display: block; }
-            #mobile-switcher { display: flex; } 
-            #main-content { padding-bottom: 70px; } 
-            .column { min-width: 85vw !important; } 
-        }
-    </style>
-</head>
-<body data-theme="dark">
-    <div id="sync-indicator"></div>
-
-    <div id="login-screen" style="position:fixed; inset:0; background:var(--bg); display:flex; justify-content:center; align-items:center; z-index:999999;">
-        <div style="background:var(--card-bg); padding:40px; border-radius:12px; border:1px solid var(--border); text-align:center;">
-            <h2>Jake's Workspace</h2>
-            <button id="login-btn" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:700;">Sign in with Google</button>
-        </div>
-    </div>
-
-    <div id="app-layout">
-        <div id="sidebar">
-            <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
-                <input type="text" id="sidebar-search" placeholder="Search Workspace..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text); outline:none; box-sizing:border-box;">
-                <div id="sidebar-search-results" style="margin-top:10px; display:none; flex-direction:column; gap:5px; max-height:200px; overflow-y:auto;"></div>
-            </div>
-
-            <div style="font-size:11px; font-weight:800; color:#888; margin-bottom:10px;">WORKSPACE</div>
-            <button class="nav-item active" data-view="kanban-view">📊 Board</button>
-            <button class="nav-item" data-view="rates-view">📈 Rate Intel</button>
-            <button class="nav-item" data-view="news-view">📰 News</button>
-            
-            <div style="font-size:11px; font-weight:800; color:#888; margin:20px 0 10px 0;">WIKI</div>
-            <div id="sidebar-wiki-list"></div>
-            <button id="add-wiki-btn" class="nav-item" style="border:1px dashed #888; color:#888; text-align:center; margin-top:10px;">+ New Page</button>
-            
-            <div style="margin-top:auto; display:flex; gap:10px;">
-                <button id="theme-toggle" class="nav-item" style="text-align:center; background:var(--border);">🌙 Mode</button>
-                <button id="logout-btn" class="nav-item" style="text-align:center; background:var(--border);">🚪 Out</button>
-            </div>
-        </div>
-
-        <div id="main-content">
-            <div id="kanban-view" class="view-pane" style="display: flex;">
-                <div style="display:flex; gap:20px; height: 100%; overflow-x: auto;">
-                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px; display:flex; justify-content:space-between;">To Do <button id="add-btn" class="btn" style="padding:2px 8px;">+</button></div><div id="todo-list" style="min-height:50vh;"></div></div>
-                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Doing</div><div id="doing-list" style="min-height:50vh;"></div></div>
-                    <div class="column" style="flex:1; min-width:300px;"><div style="font-weight:700; padding-bottom:15px;">Done</div><div id="done-list" style="min-height:50vh;"></div></div>
-                </div>
-            </div>
-            
-            <div id="rates-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                    <h2>Mortgage Rate Intelligence</h2>
-                    <div style="font-size: 11px; font-weight: 800; color: #888;">DAILY MARKET SNAPSHOT</div>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
-                    <div class="card" style="padding: 20px; height: 450px;">
-                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">30-Year Conventional Fixed</h3>
-                        <div style="flex-grow:1; position:relative;"><canvas id="convChart"></canvas></div>
-                    </div>
-                    <div class="card" style="padding: 20px; height: 450px;">
-                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">30-Year VA Fixed</h3>
-                        <div style="flex-grow:1; position:relative;"><canvas id="vaChart"></canvas></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>News Feed</h2><button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button></div>
-                <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
-            </div>
-
-            <div id="wiki-content-view" class="view-pane">
-                <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;">
-                <div style="display:flex; gap:10px; margin-bottom:20px;"><button id="wiki-mode-preview" class="btn btn-active">Preview</button><button id="wiki-mode-edit" class="btn">Edit</button></div>
-                <textarea id="wiki-notes" style="display:none; width:100%; height:60vh; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
-                <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
-        <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
-            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
-            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit; outline:none;">
-            <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:15px 0;">
-                <label style="font-size:11px; font-weight:800; color:#888;">CATEGORY:</label>
-                <select id="modal-label-select" style="margin-left:10px; background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:5px; border-radius:4px; outline:none;">
-                    <option value="none">None</option>
-                    <option value="mortgage">🏠 Mortgage</option>
-                    <option value="sunday-school">📖 Sunday School</option>
-                    <option value="church">⛪ Church</option>
-                    <option value="urgent">🚨 Urgent</option>
-                </select>
-            </div>
-            <textarea id="modal-notes" style="width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        
-        const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
-        const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
-        
-        let curTaskId = null, curWikiId = null, allTasks = [], allWiki = [], userReadList = [];
-        let convChart, vaChart;
-
-        // --- THEME ---
-        const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
-        applyTheme(localStorage.getItem('theme') || 'dark');
-        document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
-
-        // --- MORTGAGE RATE LOGIC ---
+// --- MORTGAGE RATE LOGIC ---
         function initRateCharts() {
             const commonOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#888', font: { size: 10, weight: 'bold' } } },
+                    legend: { 
+                        position: 'bottom', 
+                        labels: { color: '#888', font: { size: 10, weight: 'bold' }, usePointStyle: true } 
+                    },
                     tooltip: {
                         backgroundColor: 'rgba(30, 30, 30, 0.9)',
+                        padding: 12,
                         callbacks: {
                             label: function(context) {
                                 const d = context.raw;
                                 if (!d) return '';
                                 return [
-                                    `${context.dataset.label} Rate: ${d.y.toFixed(3)}%`,
-                                    `APR: ${d.apr.toFixed(3)}%`,
-                                    `Points: ${d.points.toFixed(3)}`
+                                    ` ${context.dataset.label}: ${Number(d.y).toFixed(3)}%`,
+                                    ` APR: ${Number(d.apr).toFixed(3)}%`,
+                                    ` Points: ${Number(d.points).toFixed(3)}`
                                 ];
                             }
                         }
                     }
                 },
                 scales: {
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } },
-                    x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+                    y: { 
+                        // This ensures the chart doesn't clip high rates
+                        beginAtZero: false,
+                        grace: '10%', 
+                        grid: { color: 'rgba(255,255,255,0.05)' }, 
+                        ticks: { 
+                            color: '#888', 
+                            callback: v => v.toFixed(2) + '%' 
+                        } 
+                    },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { color: '#888', font: { size: 10 } } 
+                    }
                 }
             };
 
@@ -199,81 +50,43 @@
             vaChart = new Chart(document.getElementById('vaChart'), { type: 'line', data: { datasets: [] }, options: commonOptions });
         }
 
-        function loadRateData() {
-            const q = query(collection(db, "mortgage_rates"), orderBy("date", "asc"));
-            onSnapshot(q, (snapshot) => {
-                const data = snapshot.docs.map(doc => doc.data());
-                updateChart(convChart, data, "30yr Conv");
-                updateChart(vaChart, data, "30yr VA");
-            });
-        }
-
         function updateChart(chart, allData, productType) {
             const lenders = ["PenFed", "NFCU", "Rocket", "USAA"];
-            const colors = ["gray", "#22c55e", "#ef4444", "#12395B"]; // USAA Navy and PenFed Gray
+            const colors = {
+                "PenFed": "gray",
+                "NFCU": "#22c55e",
+                "Rocket": "#ef4444",
+                "USAA": "#12395B"
+            };
             
-            const productData = allData.filter(d => d.product === productType);
-            const labels = [...new Set(productData.map(d => d.date))].sort(); // Ensure dates are chronological
+            // 1. Filter and Sort Data
+            const productData = allData
+                .filter(d => d.product === productType)
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // 2. Create standardized labels (dates)
+            const labels = [...new Set(productData.map(d => d.date))];
 
             chart.data.labels = labels;
-            chart.data.datasets = lenders.map((lender, i) => ({
+            chart.data.datasets = lenders.map((lender) => ({
                 label: lender,
                 data: labels.map(date => {
                     const e = productData.find(d => d.date === date && d.lender === lender);
-                    // Standardizing the hover object to include APR and Points
-                    return e ? { x: date, y: e.rate, apr: e.apr, points: e.points } : null;
+                    // Force values to Numbers to prevent Chart.js string errors
+                    return e ? { 
+                        x: date, 
+                        y: parseFloat(e.rate), 
+                        apr: parseFloat(e.apr), 
+                        points: parseFloat(e.points) 
+                    } : null;
                 }),
-                borderColor: colors[i],
-                backgroundColor: colors[i],
+                borderColor: colors[lender],
+                backgroundColor: colors[lender],
                 tension: 0.3,
                 borderWidth: 2,
-                spanGaps: true // Connects lines even if a day is missing
+                pointRadius: 4,
+                spanGaps: true // This connects the lines even if a day is missing
             }));
+            
             chart.update();
         }
-
-        // --- AUTH & INITIAL DATA ---
-        onAuthStateChanged(auth, async (u) => {
-            if(u) { 
-                document.getElementById('login-screen').style.display='none'; 
-                initRateCharts(); loadRateData();
-            } else { document.getElementById('login-screen').style.display='flex'; }
-        });
-        
-        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
-
-        // --- NAVIGATION ---
-        window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
-        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => { 
-            const vid = b.getAttribute('data-view');
-            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
-            b.classList.add('active'); window.showView(vid); 
-        });
-
-        // --- KANBAN & WIKI (Simplified) ---
-        onSnapshot(collection(db, "tasks"), (s) => {
-            ['todo','doing','done'].forEach(st => {
-                const list = document.getElementById(`${st}-list`); list.innerHTML = '';
-                s.docs.filter(d => d.data().status === st).forEach(d => {
-                    const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<div>${d.data().text}</div>`;
-                    list.appendChild(card);
-                });
-            });
-        });
-
-        onSnapshot(collection(db, "wiki"), (s) => {
-            const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
-            s.docs.forEach(d => {
-                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = `📄 ${d.data().title}`;
-                btn.onclick = () => {
-                    document.getElementById('wiki-title-display').value = d.data().title;
-                    document.getElementById('wiki-preview').innerHTML = marked.parse(d.data().content || '');
-                    window.showView('wiki-content-view');
-                };
-                sList.appendChild(btn);
-            });
-        });
-    </script>
-</body>
-</html>
