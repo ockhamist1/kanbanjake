@@ -30,7 +30,7 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
 
-        /* Kanban Badges */
+        /* KANBAN COLORS */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
         .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
@@ -44,7 +44,7 @@
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
 
-        /* News Persistance Styles */
+        /* News Persistance */
         .news-card.read { opacity: 0.3; filter: grayscale(1); order: 1; }
         .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
 
@@ -104,7 +104,7 @@
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; flex-shrink:0;">
                     <h2>AP News Feed</h2>
                     <button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button>
                 </div>
@@ -112,7 +112,7 @@
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; flex-shrink:0;">
                     <h2>🎁 Reddit Deals</h2>
                     <button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button>
                 </div>
@@ -152,7 +152,7 @@
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         
-        let convChart, vaChart, userReadList = [];
+        let convChart, vaChart, userReadList = [], isDragging = false;
 
         // --- THEME ---
         const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
@@ -178,9 +178,10 @@
                 scales: {
                     y: { 
                         beginAtZero: false,
-                        grace: '25%', // Significant headroom for 6.5%+ rates
+                        suggestedMin: 4.5,
+                        suggestedMax: 7.5, // Specifically zoom out for Rocket's 6.5%
                         grid: { color: 'rgba(255,255,255,0.05)' }, 
-                        ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } 
+                        ticks: { color: '#888', stepSize: 0.25, callback: v => v.toFixed(2) + '%' } 
                     },
                     x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
                 }
@@ -203,6 +204,7 @@
             const colors = { "PenFed": "gray", "NFCU": "#22c55e", "Rocket": "#ef4444", "USAA": "#12395B" };
             const productData = allData.filter(d => d.product === productType);
             const labels = [...new Set(productData.map(d => d.date))].sort();
+            
             chart.data.labels = labels;
             chart.data.datasets = lenders.map(lender => ({
                 label: lender,
@@ -265,7 +267,9 @@
             ['todo', 'doing', 'done'].forEach(st => {
                 new Sortable(document.getElementById(`${st}-list`), {
                     group: 'kanban', animation: 150,
+                    onStart: () => { isDragging = true; },
                     onEnd: async (e) => {
+                        isDragging = false;
                         const taskId = e.item.getAttribute('data-id');
                         const status = e.to.id.split('-')[0];
                         await updateDoc(doc(db, 'tasks', taskId), { status });
@@ -275,6 +279,7 @@
         }
 
         onSnapshot(collection(db, "tasks"), (s) => {
+            if (isDragging) return; // Prevent freeze during drag
             ['todo','doing','done'].forEach(st => {
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
                 s.docs.filter(d => d.data().status === st && !d.id.startsWith('prefs_')).forEach(d => {
@@ -306,11 +311,10 @@
             });
         });
 
-        // --- INIT ---
+        // --- INITIALIZATION ---
         onAuthStateChanged(auth, async (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
-                // CRITICAL: Pull read history FIRST
                 const prefDoc = await getDoc(doc(db, 'tasks', `prefs_${u.uid}`));
                 if (prefDoc.exists()) userReadList = prefDoc.data().readArticles || [];
                 
