@@ -24,23 +24,24 @@
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; flex-direction: column; }
-        
         #app-layout { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
 
+        /* Kanban Badges */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
         .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
         .badge-church { background: var(--c-bg); color: var(--c-txt); }
         .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
+        .badge-none { display: none; }
 
         .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
         .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
-
+        
         .news-card.read { opacity: 0.3; filter: grayscale(1); order: 100; }
         .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
 
@@ -63,6 +64,7 @@
             <button class="nav-item" data-view="rates-view">📈 Rate Intel</button>
             <button class="nav-item" data-view="news-view">📰 News</button>
             <button class="nav-item" data-view="freebies-view">🎁 Deals</button>
+            <div style="font-size:11px; font-weight:800; color:#888; margin:20px 0 10px 0;">WIKI</div>
             <div id="sidebar-wiki-list"></div>
             <div style="margin-top:auto; display:flex; gap:10px;">
                 <button id="theme-toggle" class="nav-item" style="text-align:center; background:var(--border);">🌙 Mode</button>
@@ -84,26 +86,42 @@
                     <h2>Mortgage Rate Intelligence</h2>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
-                    <div class="card" style="padding: 20px; height: 450px;"><canvas id="convChart"></canvas></div>
-                    <div class="card" style="padding: 20px; height: 450px;"><canvas id="vaChart"></canvas></div>
+                    <div class="card" style="padding: 20px; height: 450px;"><h3 style="margin-bottom:15px; font-size:14px;">30-Year Conventional Fixed</h3><canvas id="convChart"></canvas></div>
+                    <div class="card" style="padding: 20px; height: 450px;"><h3 style="margin-bottom:15px; font-size:14px;">30-Year VA Fixed</h3><canvas id="vaChart"></canvas></div>
                 </div>
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink:0;">
-                    <h2>AP News Feed</h2>
-                    <button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button>
-                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h2>AP News Feed</h2><button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button></div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px;"></div>
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink:0;">
-                    <h2>🎁 Reddit Deals</h2>
-                    <button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button>
-                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h2>🎁 Reddit Deals</h2><button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button></div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px;"></div>
             </div>
+
+            <div id="wiki-content-view" class="view-pane">
+                <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;" readonly>
+                <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
+            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit; outline:none;">
+            <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:15px 0;">
+                <select id="modal-label-select" style="background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:8px; border-radius:4px;">
+                    <option value="none">None</option>
+                    <option value="mortgage">🏠 Mortgage</option>
+                    <option value="sunday-school">📖 Sunday School</option>
+                    <option value="church">⛪ Church</option>
+                    <option value="urgent">🚨 Urgent</option>
+                </select>
+            </div>
+            <textarea id="modal-notes" style="width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; box-sizing:border-box;"></textarea>
         </div>
     </div>
 
@@ -115,13 +133,14 @@
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         
-        let convChart, vaChart, userReadList = [], isDragging = false;
+        let convChart, vaChart, userReadList = [], isDragging = false, curTaskId = null;
 
+        // --- RATES (Fixed String Match & Clipping) ---
         function initRateCharts() {
             const commonOptions = {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: false, suggestedMin: 4.5, suggestedMax: 7.5, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } },
+                    y: { beginAtZero: false, suggestedMin: 4.5, suggestedMax: 8.0, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } },
                     x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
                 },
                 plugins: { legend: { position: 'bottom', labels: { color: '#888', font: { size: 10, weight: 'bold' } } } }
@@ -134,8 +153,8 @@
             const lenders = ["PenFed", "NFCU", "Rocket", "USAA"];
             const colors = { "PenFed": "gray", "NFCU": "#22c55e", "Rocket": "#ef4444", "USAA": "#12395B" };
             
-            // FUZZY MATCH: Your scraper saves as "30yr Conv"
-            const productData = allData.filter(d => d.product.trim().toLowerCase().includes('conv') === productType.toLowerCase().includes('conv'));
+            // FUZZY MATCH: Your scraper saves as "30yr Conv" - this catches it
+            const productData = allData.filter(d => d.product.toLowerCase().includes(productType.toLowerCase()));
             const labels = [...new Set(productData.map(d => d.date))].sort();
             
             chart.data.labels = labels;
@@ -147,12 +166,13 @@
                 }),
                 borderColor: colors[lender], backgroundColor: colors[lender],
                 tension: 0.3, borderWidth: 2, spanGaps: true, 
-                pointRadius: 8, // Ensure single points show up as dots
+                pointRadius: 8, // Crucial: shows dots even if only 1 day of data exists
                 showLine: true
             }));
             chart.update();
         }
 
+        // --- FEEDS & PERSISTENCE ---
         async function fetchRSS(feedId, url) {
             const container = document.getElementById(feedId); container.innerHTML = '<p>Syncing...</p>';
             try {
@@ -172,16 +192,50 @@
                 });
             } catch(e) { container.innerHTML = '<p>Feed signal blocked.</p>'; }
         }
-
         window.fetchAP = () => fetchRSS('news-container', 'https://apnews.com/hub/ap-top-news.rss');
         window.fetchFreebies = () => fetchRSS('freebies-container', 'https://www.reddit.com/r/freebies/.rss');
+
+        // --- KANBAN & INITIALIZATION ---
+        function initSortable() {
+            ['todo', 'doing', 'done'].forEach(st => {
+                new Sortable(document.getElementById(`${st}-list`), {
+                    group: 'kanban', animation: 150, onStart: () => { isDragging = true; },
+                    onEnd: async (e) => {
+                        isDragging = false; const taskId = e.item.getAttribute('data-id');
+                        await updateDoc(doc(db, 'tasks', taskId), { status: e.to.id.split('-')[0] });
+                    }
+                });
+            });
+        }
+
+        onSnapshot(collection(db, "tasks"), (s) => {
+            if (isDragging) return;
+            ['todo','doing','done'].forEach(st => {
+                const list = document.getElementById(`${st}-list`); list.innerHTML = '';
+                s.docs.filter(d => d.data().status === st && !d.id.startsWith('prefs_')).forEach(d => {
+                    const t = d.data(); const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
+                    card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
+                    card.onclick = () => { curTaskId = d.id; document.getElementById('modal-title-display').value = t.text; document.getElementById('modal-notes').value = t.notes || ''; document.getElementById('modal-label-select').value = t.label || 'none'; document.getElementById('editor-modal').style.display = 'flex'; };
+                    list.appendChild(card);
+                });
+            });
+        });
+
+        onSnapshot(collection(db, "wiki"), (s) => {
+            const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
+            s.docs.forEach(d => {
+                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = `📄 ${d.data().title}`;
+                btn.onclick = () => { document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-preview').innerHTML = marked.parse(d.data().content || ''); window.showView('wiki-content-view'); };
+                sList.appendChild(btn);
+            });
+        });
 
         onAuthStateChanged(auth, async (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
                 const prefDoc = await getDoc(doc(db, 'tasks', `prefs_${u.uid}`));
                 if (prefDoc.exists()) userReadList = prefDoc.data().readArticles || [];
-                initRateCharts(); window.fetchAP(); window.fetchFreebies();
+                initRateCharts(); initSortable(); window.fetchAP(); window.fetchFreebies();
                 onSnapshot(query(collection(db, "mortgage_rates"), orderBy("date", "asc")), (snap) => {
                     const data = snap.docs.map(doc => doc.data());
                     updateChart(convChart, data, "conv"); updateChart(vaChart, data, "va");
@@ -191,7 +245,11 @@
         
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
-        window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; };
+        document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display='none';
+        document.getElementById('modal-label-select').onchange = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); };
+        document.getElementById('modal-notes').oninput = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
+        window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); if(n.getAttribute('data-view') === vid) n.classList.add('active'); }); };
         document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => showView(b.getAttribute('data-view')));
     </script>
 </body>
