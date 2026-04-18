@@ -24,28 +24,33 @@
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; background-color: var(--bg); color: var(--text); display: flex; transition: background 0.3s; overflow: hidden; flex-direction: column; }
-        
-        /* Layout */
+        #sync-indicator { position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; opacity: 0; z-index: 9999; pointer-events: none; }
+        #sync-indicator.active { opacity: 1; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+        .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
+        .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
+        .badge-church { background: var(--c-bg); color: var(--c-txt); }
+        .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
+
         #app-layout { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
         #sidebar { width: 260px; background-color: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
-
-        /* UI Elements */
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
         .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
+
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
         .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
 
-        /* Mobile Adjustments */
-        @media (max-width: 768px) { 
-            #sidebar { display: none; } 
-            .column { min-width: 85vw !important; } 
-        }
+        @media (max-width: 768px) { #sidebar { display: none; } #main-content { padding-bottom: 70px; } }
     </style>
 </head>
 <body data-theme="dark">
+    <div id="sync-indicator"></div>
 
     <div id="login-screen" style="position:fixed; inset:0; background:var(--bg); display:flex; justify-content:center; align-items:center; z-index:999999;">
         <div style="background:var(--card-bg); padding:40px; border-radius:12px; border:1px solid var(--border); text-align:center;">
@@ -63,6 +68,7 @@
             
             <div style="font-size:11px; font-weight:800; color:#888; margin:20px 0 10px 0;">WIKI</div>
             <div id="sidebar-wiki-list"></div>
+            <button id="add-wiki-btn" class="nav-item" style="border:1px dashed #888; color:#888; text-align:center; margin-top:10px;">+ New Page</button>
             
             <div style="margin-top:auto; display:flex; gap:10px;">
                 <button id="theme-toggle" class="nav-item" style="text-align:center; background:var(--border);">🌙 Mode</button>
@@ -97,7 +103,7 @@
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>News Feed</h2></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2></div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
@@ -105,6 +111,14 @@
                 <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;" readonly>
                 <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
             </div>
+        </div>
+    </div>
+
+    <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
+            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
+            <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit; outline:none;">
+            <textarea id="modal-notes" style="width:100%; height:300px; background:transparent; border:1px solid var(--border); padding:15px; color:inherit; font-size:16px; outline:none; box-sizing:border-box; margin-top:20px;"></textarea>
         </div>
     </div>
 
@@ -117,11 +131,6 @@
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         
         let convChart, vaChart;
-
-        // --- THEME ---
-        const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
-        applyTheme(localStorage.getItem('theme') || 'dark');
-        document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
         // --- MORTGAGE RATE LOGIC ---
         function initRateCharts() {
@@ -141,7 +150,7 @@
                                 return [
                                     ` ${context.dataset.label}: ${Number(d.y).toFixed(3)}%`,
                                     ` APR: ${Number(d.apr).toFixed(3)}%`,
-                                    ` Points: ${Number(d.points).toFixed(3)}`
+                                    ` Pts: ${Number(d.points).toFixed(3)}`
                                 ];
                             }
                         }
@@ -150,7 +159,7 @@
                 scales: {
                     y: { 
                         beginAtZero: false,
-                        grace: '10%', // Ensures high rates don't touch the top
+                        grace: '10%', // Headroom for high rates
                         grid: { color: 'rgba(255,255,255,0.05)' }, 
                         ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } 
                     },
@@ -162,79 +171,53 @@
             vaChart = new Chart(document.getElementById('vaChart'), { type: 'line', data: { datasets: [] }, options: commonOptions });
         }
 
-        function loadRateData() {
-            // Ordering by date ASC is vital for Chart.js line connection
-            const q = query(collection(db, "mortgage_rates"), orderBy("date", "asc"));
-            onSnapshot(q, (snapshot) => {
-                const data = snapshot.docs.map(doc => doc.data());
-                updateChart(convChart, data, "30yr Conv");
-                updateChart(vaChart, data, "30yr VA");
-            });
-        }
-
         function updateChart(chart, allData, productType) {
             const lenders = ["PenFed", "NFCU", "Rocket", "USAA"];
-            const colors = {
-                "PenFed": "gray",
-                "NFCU": "#22c55e",
-                "Rocket": "#ef4444",
-                "USAA": "#12395B" // USAA Navy
-            };
+            const colors = { "PenFed": "gray", "NFCU": "#22c55e", "Rocket": "#ef4444", "USAA": "#12395B" };
             
             const productData = allData.filter(d => d.product === productType);
-            const labels = [...new Set(productData.map(d => d.date))];
+            const labels = [...new Set(productData.map(d => d.date))].sort();
 
             chart.data.labels = labels;
             chart.data.datasets = lenders.map((lender) => ({
                 label: lender,
                 data: labels.map(date => {
                     const e = productData.find(d => d.date === date && d.lender === lender);
-                    return e ? { 
-                        x: date, 
-                        y: parseFloat(e.rate), 
-                        apr: parseFloat(e.apr), 
-                        points: parseFloat(e.points) 
-                    } : null;
+                    return e ? { x: date, y: parseFloat(e.rate), apr: parseFloat(e.apr), points: parseFloat(e.points) } : null;
                 }),
                 borderColor: colors[lender],
                 backgroundColor: colors[lender],
                 tension: 0.3,
                 borderWidth: 2,
-                pointRadius: 4,
-                spanGaps: true // Connects lines even if data is missing on some days
+                spanGaps: true // Connects lines across missing days
             }));
             chart.update();
         }
 
-        // --- AUTH & INIT ---
+        // --- FIREBASE SYNC ---
         onAuthStateChanged(auth, (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
-                initRateCharts(); loadRateData(); 
+                initRateCharts();
+                const q = query(collection(db, "mortgage_rates"), orderBy("date", "asc"));
+                onSnapshot(q, (snapshot) => {
+                    const data = snapshot.docs.map(doc => doc.data());
+                    updateChart(convChart, data, "30yr Conv");
+                    updateChart(vaChart, data, "30yr VA");
+                });
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
-        
-        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // --- NAV & UI ---
-        window.showView = (vid) => { 
-            document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); 
-            document.getElementById(vid).style.display = 'flex'; 
-        };
-
-        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => { 
-            const vid = b.getAttribute('data-view');
-            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
-            b.classList.add('active'); window.showView(vid); 
-        });
-
-        // --- KANBAN & WIKI ---
         onSnapshot(collection(db, "tasks"), (s) => {
             ['todo','doing','done'].forEach(st => {
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
                 s.docs.filter(d => d.data().status === st).forEach(d => {
                     const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<div>${d.data().text}</div>`;
+                    card.onclick = () => {
+                        document.getElementById('modal-title-display').value = d.data().text;
+                        document.getElementById('modal-notes').value = d.data().notes || '';
+                        document.getElementById('editor-modal').style.display='flex';
+                    };
                     list.appendChild(card);
                 });
             });
@@ -247,11 +230,25 @@
                 btn.onclick = () => {
                     document.getElementById('wiki-title-display').value = d.data().title;
                     document.getElementById('wiki-preview').innerHTML = marked.parse(d.data().content || '');
-                    window.showView('wiki-content-view');
+                    document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none');
+                    document.getElementById('wiki-content-view').style.display = 'flex';
                 };
                 sList.appendChild(btn);
             });
         });
+
+        // --- NAVIGATION & UI ---
+        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => { 
+            const vid = b.getAttribute('data-view');
+            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
+            b.classList.add('active');
+            document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none');
+            document.getElementById(vid).style.display = 'flex';
+        });
+
+        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+        document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display='none';
     </script>
 </body>
 </html>
