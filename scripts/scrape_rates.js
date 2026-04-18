@@ -14,7 +14,11 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Only accept numbers that look like current mortgage rates
+// Helper to force 3 decimal places as a Number
+const format3 = (val) => {
+    return parseFloat(Number(val).toFixed(3));
+};
+
 const isSaneRate = (val) => val >= 4.5 && val <= 9.5;
 
 async function run() {
@@ -31,14 +35,12 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`>>> FETCHING: ${lender.name}`);
         try {
-            // Added wait_for_selector to ensure the rate tables are actually there
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&wait_until=networkidle`;
             const response = await axios.get(proxyUrl, { timeout: 120000 });
             
             let data = response.data;
             if (typeof data !== 'string') data = JSON.stringify(data);
 
-            // CRITICAL STEP: Strip out the "Noise" (Style, Scripts, Tags)
             const cleanText = data
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
@@ -48,32 +50,36 @@ async function run() {
 
             const configs = [
                 { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['30-Year VA', '30 Year VA', 'VA Loan', 'Veteran'] }
+                { id: '30yr VA', keys: ['30-Year VA', '30 Year VA', 'VA Loan', 'Veteran', 'VA Fixed'] }
             ];
 
             for (const conf of configs) {
-                // Search for the product name and look at the next 1000 characters
-                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1000})`, 'i');
+                // Expanded search window to 2500 chars to find VA tables buried at the bottom
+                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,2500})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[2];
-                    // Look for decimals followed by a % or just decimals in the sane range
                     const rateMatches = block.match(/(\d+\.\d+)(?=\s?%)/g) || block.match(/(\d+\.\d+)/g);
                     
                     if (rateMatches) {
                         const nums = rateMatches.map(n => parseFloat(n));
-                        const rate = nums.find(n => isSaneRate(n));
+                        const rawRate = nums.find(n => isSaneRate(n));
                         
-                        if (rate) {
-                            const apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.25);
-                            const points = nums.find(n => n > 0 && n < 3.0 && n !== rate && n !== apr) || 0;
+                        if (rawRate) {
+                            const rawApr = nums.find(n => n > rawRate && n < rawRate + 1.2) || (rawRate + 0.25);
+                            const rawPoints = nums.find(n => n > 0 && n < 3.0 && n !== rawRate && n !== rawApr) || 0;
+
+                            // Apply the 3-decimal precision here
+                            const rate = format3(rawRate);
+                            const apr = format3(rawApr);
+                            const points = format3(rawPoints);
 
                             results.push({
                                 lender: lender.name, product: conf.id, date: today,
                                 rate, apr, points, timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
-                            console.log(`   ✅ ${conf.id}: ${rate}%`);
+                            console.log(`   ✅ ${conf.id}: ${rate.toFixed(3)}% | APR: ${apr.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
                         }
                     }
                 } else {
@@ -86,13 +92,14 @@ async function run() {
     }
 
     if (results.length > 0) {
-        console.log(`>>> SAVING: ${results.length} items.`);
+        console.log(`>>> SAVING: ${results.length} items to Firebase.`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
+        console.log(">>> UPDATE COMPLETE.");
     }
 }
 
