@@ -30,7 +30,7 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
 
-        /* KANBAN COLORS RESTORED */
+        /* KANBAN COLORS */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
         .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
@@ -43,6 +43,10 @@
         .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* News Read Status Styling */
+        .news-card.read { opacity: 0.3; filter: grayscale(1); order: 1; }
+        .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
 
         @media (max-width: 768px) { #sidebar { display: none; } .column { min-width: 85vw !important; } }
     </style>
@@ -100,12 +104,18 @@
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>AP News Feed</h2>
+                    <button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button>
+                </div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Deals</h2></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>🎁 Reddit Deals</h2>
+                    <button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button>
+                </div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
@@ -136,20 +146,20 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         
-        let convChart, vaChart;
+        let convChart, vaChart, userReadList = [];
 
         // --- THEME ---
         const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- RATES (Fixed Scaling) ---
+        // --- RATES (Scale Fix) ---
         function initRateCharts() {
             const commonOptions = {
                 responsive: true, maintainAspectRatio: false,
@@ -167,7 +177,8 @@
                 },
                 scales: {
                     y: { 
-                        grace: '20%', // This forces the chart to show the 6.5% Rocket rate
+                        beginAtZero: false,
+                        grace: '10%', // Headroom for high rates
                         grid: { color: 'rgba(255,255,255,0.05)' }, 
                         ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } 
                     },
@@ -200,34 +211,56 @@
                     return e ? { x: date, y: parseFloat(e.rate), apr: parseFloat(e.apr), points: parseFloat(e.points) } : null;
                 }),
                 borderColor: colors[lender], backgroundColor: colors[lender],
-                tension: 0.3, borderWidth: 2, spanGaps: true, pointRadius: 4
+                tension: 0.3, borderWidth: 2, spanGaps: true, pointRadius: 5
             }));
             chart.update();
         }
 
-        // --- FEEDS (Fixed Reddit CORS) ---
-        async function fetchFeeds() {
-            const feeds = [
-                { id: 'news-container', url: 'https://apnews.com/hub/ap-top-news.rss' },
-                { id: 'freebies-container', url: 'https://www.reddit.com/r/freebies/.rss' }
-            ];
-            for (const feed of feeds) {
-                const container = document.getElementById(feed.id);
-                try {
-                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`);
-                    const data = await r.json();
-                    container.innerHTML = '';
-                    data.items.slice(0, 10).forEach(i => {
-                        const div = document.createElement('div'); div.className = 'card';
-                        div.innerHTML = `<b>${i.title}</b>`;
-                        div.onclick = () => window.open(i.link, '_blank');
-                        container.appendChild(div);
-                    });
-                } catch(e) { container.innerHTML = '<p>Feed signal blocked.</p>'; }
-            }
+        // --- PERSISTENCE & FEEDS ---
+        async function toggleRead(link, read, div) {
+            if (read) { if(!userReadList.includes(link)) userReadList.push(link); }
+            else { userReadList = userReadList.filter(l => l !== link); }
+            div.classList.toggle('read', read);
+            if(auth.currentUser) await setDoc(doc(db, 'tasks', `prefs_${auth.currentUser.uid}`), { readArticles: userReadList }, { merge: true });
         }
 
-        // --- KANBAN (Fixed Freeze Bug) ---
+        window.fetchAP = async () => {
+            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing...</p>';
+            try {
+                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://apnews.com/hub/ap-top-news.rss')}`);
+                const data = await r.json();
+                c.innerHTML = '';
+                data.items.slice(0,12).forEach(i => {
+                    const link = i.link.split('?')[0];
+                    const isRead = userReadList.includes(link);
+                    const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                    div.innerHTML = `<div><b>${i.title}</b></div><label class="read-toggle"><input type="checkbox" ${isRead?'checked':''}> Read</label>`;
+                    div.onclick = (e) => { if(!e.target.closest('.read-toggle')) window.open(link, '_blank'); };
+                    div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
+                    c.appendChild(div);
+                });
+            } catch(e) { c.innerHTML = '<p>Signal blocked.</p>'; }
+        };
+
+        window.fetchFreebies = async () => {
+            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing...</p>';
+            try {
+                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.reddit.com/r/freebies/.rss')}`);
+                const data = await r.json();
+                c.innerHTML = '';
+                data.items.slice(0,12).forEach(i => {
+                    const link = i.link.split('?')[0];
+                    const isRead = userReadList.includes(link);
+                    const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                    div.innerHTML = `<div><b>${i.title}</b></div><label class="read-toggle"><input type="checkbox" ${isRead?'checked':''}> Read</label>`;
+                    div.onclick = (e) => { if(!e.target.closest('.read-toggle')) window.open(link, '_blank'); };
+                    div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
+                    c.appendChild(div);
+                });
+            } catch(e) { c.innerHTML = '<p>Signal blocked.</p>'; }
+        };
+
+        // --- KANBAN & WIKI ---
         function initSortable() {
             ['todo', 'doing', 'done'].forEach(st => {
                 new Sortable(document.getElementById(`${st}-list`), {
@@ -244,10 +277,9 @@
         onSnapshot(collection(db, "tasks"), (s) => {
             ['todo','doing','done'].forEach(st => {
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
-                s.docs.filter(d => d.data().status === st).forEach(d => {
+                s.docs.filter(d => d.data().status === st && !d.id.startsWith('prefs_')).forEach(d => {
                     const t = d.data();
-                    const card = document.createElement('div');
-                    card.className = 'card'; card.setAttribute('data-id', d.id);
+                    const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
                     card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
                     card.onclick = () => {
                         curTaskId = d.id;
@@ -261,7 +293,6 @@
             });
         });
 
-        // --- WIKI ---
         onSnapshot(collection(db, "wiki"), (s) => {
             const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
             s.docs.forEach(d => {
@@ -275,11 +306,13 @@
             });
         });
 
-        // --- INIT ---
-        onAuthStateChanged(auth, (u) => {
+        // --- INITIALIZATION ---
+        onAuthStateChanged(auth, async (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
-                initRateCharts(); loadRateData(); initSortable(); fetchFeeds();
+                const prefDoc = await getDoc(doc(db, 'tasks', `prefs_${u.uid}`));
+                if (prefDoc.exists()) userReadList = prefDoc.data().readArticles || [];
+                initRateCharts(); loadRateData(); initSortable(); window.fetchAP(); window.fetchFreebies();
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
         
@@ -298,7 +331,6 @@
         };
         document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => showView(b.getAttribute('data-view')));
 
-        // Modal Updates
         let curTaskId = null;
         document.getElementById('modal-label-select').onchange = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); };
         document.getElementById('modal-notes').oninput = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
