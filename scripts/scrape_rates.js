@@ -32,7 +32,6 @@ async function run() {
             const response = await axios.get(proxyUrl, { timeout: 90000 });
             let rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
 
-            // Clean text version for standard table scraping
             const cleanText = rawData
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
@@ -41,37 +40,39 @@ async function run() {
 
             const configs = [
                 { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'Veteran', 'VA Fixed'] }
+                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', '30-Year VA'] }
             ];
 
             for (const conf of configs) {
                 let rate = 0, apr = 0, points = 0;
 
-                // 1. TRY STANDARD SEARCH (Table View)
-                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1000})`, 'i');
+                // 1. SCAN THE VISIBLE TEXT (Table View)
+                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1200})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[2];
-                    const decimals = block.match(/(\d+(?:\.\d+)?)/g);
+                    const decimals = block.match(/(\d+\.\d+)/g); // Only look for actual decimals first
                     if (decimals) {
                         const nums = decimals.map(n => parseFloat(n));
                         rate = nums.find(n => isSaneRate(n));
                         if (rate) {
-                            apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.22);
-                            points = nums.find(n => n > 0 && n < 3.5 && n !== rate && n !== apr) || 0;
+                            apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.25);
+                            // Points: specifically look for a small decimal that isn't the rate or APR
+                            points = nums.find(n => n > 0 && n < 2.5 && n !== rate && n !== apr) || 0;
                         }
                     }
                 }
 
-                // 2. IF FAILED, TRY JSON-KEY SEARCH (For Rocket/Modern Apps)
+                // 2. JSON DEEP SCAN (For Rocket and modern Web Apps)
                 if (!rate) {
-                    // Look for patterns like "30-Year Fixed","rate":6.125
-                    const jsonRegex = new RegExp(`(?:${conf.keys.join('|')})[^}]*?rate["\\s:]+([4-9]\\.\\d+)`, 'i');
+                    // This regex looks for "VA" or "Conv" then finds the NEXT rate:6.125 pattern
+                    const jsonRegex = new RegExp(`(?:${conf.keys.join('|')})[\\s\\S]{1,1000}rate["\\s:]+([4-9]\\.\\d+)`, 'i');
                     const jsonMatch = rawData.match(jsonRegex);
                     if (jsonMatch) {
                         rate = parseFloat(jsonMatch[1]);
-                        const ptsMatch = rawData.substring(jsonMatch.index, jsonMatch.index + 500).match(/points["\\s:]+([0-3]\\.\\d+)/i);
+                        // Search for points within 500 chars of where we found the rate
+                        const ptsMatch = rawData.substring(jsonMatch.index, jsonMatch.index + 500).match(/points["\\s:]+([0-2]\\.\\d+)/i);
                         points = ptsMatch ? parseFloat(ptsMatch[1]) : 0;
                         apr = rate + 0.25;
                     }
@@ -96,14 +97,13 @@ async function run() {
     }
 
     if (results.length > 0) {
-        console.log(`>>> SAVING: ${results.length} records to Firestore.`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(">>> UPDATE COMPLETE.");
+        console.log(`>>> SUCCESS: Saved ${results.length} records.`);
     }
 }
 
