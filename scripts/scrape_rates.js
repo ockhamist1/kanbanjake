@@ -9,7 +9,6 @@ if (!admin.apps.length) { admin.initializeApp({ credential: admin.credential.cer
 const db = admin.firestore();
 
 const format3 = (val) => parseFloat(Number(val).toFixed(3));
-// Updated to accept whole numbers like 5% or 6%
 const isSaneRate = (val) => val >= 4.0 && val <= 9.5;
 
 async function run() {
@@ -17,22 +16,26 @@ async function run() {
     const results = [];
 
     const LENDERS = [
-        { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates', render: true },
-        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html', render: true },
-        { name: 'Rocket', url: 'https://www.rocketmortgage.com/mortgage-rates', render: true },
-        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/', render: true }
+        { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
+        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
+        { name: 'Rocket', url: 'https://www.rocketmortgage.com/mortgage-rates' },
+        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
     ];
 
+    // Create a unique session ID for this entire run
+    const session = Math.floor(Math.random() * 99999);
+
     for (const lender of LENDERS) {
-        console.log(`>>> ATTEMPTING: ${lender.name}`);
+        console.log(`>>> GHOST FETCH: ${lender.name}`);
         try {
-            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&premium=true&country_code=us&render=${lender.render}`;
-            const response = await axios.get(proxyUrl, { timeout: 60000 });
+            // Added device_type=desktop and keep_headers=true for maximum stealth
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&session_number=${session}&device_type=desktop&keep_headers=true`;
             
-            let rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            
-            // Clean text but keep numbers and common rate symbols
-            const cleanText = rawData
+            const response = await axios.get(proxyUrl, { timeout: 90000 });
+            console.log(`   <<< DATA RECEIVED: ${lender.name} (${response.data.length} bytes)`);
+
+            let cleanText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            cleanText = cleanText
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
                 .replace(/<[^>]*>/g, ' | ')
@@ -40,21 +43,19 @@ async function run() {
 
             const configs = [
                 { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'Veteran'] }
+                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'Veteran', 'VA Fixed'] }
             ];
 
             for (const conf of configs) {
-                // Look for keywords and grab a large chunk of text following it
                 const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,2000}`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[0];
-                    // Updated Regex: finds numbers with OR without decimals
-                    const numbers = block.match(/(\d+(?:\.\d+)?)/g);
+                    const decimals = block.match(/(\d+(?:\.\d+)?)/g);
                     
-                    if (numbers) {
-                        const nums = numbers.map(n => parseFloat(n));
+                    if (decimals) {
+                        const nums = decimals.map(n => parseFloat(n));
                         const rate = nums.find(n => isSaneRate(n));
                         
                         if (rate) {
@@ -71,6 +72,9 @@ async function run() {
                     }
                 }
             }
+            // Small human-like pause between lenders
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
         } catch (err) {
             console.error(`   ❌ ${lender.name} FAILED: ${err.message}`);
         }
@@ -84,7 +88,6 @@ async function run() {
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(">>> UPDATE COMPLETE.");
     }
 }
 
