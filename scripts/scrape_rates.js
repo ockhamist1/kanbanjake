@@ -14,15 +14,11 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Helper to find a number in a string within a specific range
-const findRateInRange = (text, min, max) => {
-    const matches = text.match(/(\d+\.\d+)/g);
-    if (!matches) return 0;
-    const found = matches.find(n => {
-        const val = parseFloat(n);
-        return val >= min && val <= max;
-    });
-    return found ? parseFloat(found) : 0;
+// Helper to find the first rate in a messy block of text
+const findRate = (text) => {
+    // Looks for 5.000 to 8.999 followed by a % or just as a decimal
+    const matches = text.match(/([5-8]\.\d{2,3})/g);
+    return matches ? parseFloat(matches[0]) : 0;
 };
 
 const LENDERS = [
@@ -39,69 +35,50 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`--- Fetching ${lender.name} ---`);
         try {
-            // Using render=true but with a shorter timeout to prevent hanging
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true`;
-            const response = await axios.get(proxyUrl, { timeout: 60000 });
-            const html = response.data;
+            const response = await axios.get(proxyUrl, { timeout: 90000 });
+            // Remove HTML tags and extra spaces to make the data "cleaner" to search
+            const cleanText = response.data.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 
             const productConfigs = [
-                { type: '30yr Conv', keywords: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { type: '30yr VA', keywords: ['VA Fixed', '30-Year VA', '30 Year VA'] }
+                { type: '30yr Conv', keywords: ['Conventional', '30-Year Fixed', '30 Year Fixed'] },
+                { type: '30yr VA', keywords: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30'] }
             ];
 
             for (const prod of productConfigs) {
-                // Find the section of the page mentioning the product
-                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,500}`, 'i');
-                const match = html.match(regex);
+                // Find a massive 1000-character block around the keyword
+                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,1000}`, 'i');
+                const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[0];
-                    console.log(`Found block for ${lender.name} ${prod.type}: ${block.substring(0, 100)}...`);
-
-                    // 1. Rate: Look for numbers between 5% and 9%
-                    const rate = findRateInRange(block, 5.0, 9.0);
+                    const rate = findRate(block);
                     
-                    // 2. Points: Look for numbers between 0.0 and 3.0 (Points are usually low)
-                    // We look for the word "Points" first
-                    let points = 0;
-                    const pointsMatch = block.match(/points[^\d]{1,20}(\d+\.\d+)/i);
-                    if (pointsMatch) {
-                        points = parseFloat(pointsMatch[1]);
-                    } else {
-                        // Fallback: Find the first small decimal that isn't the rate
-                        const smallDecimals = block.match(/(\d+\.\d+)/g);
-                        if (smallDecimals) {
-                            const p = smallDecimals.find(n => parseFloat(n) > 0 && parseFloat(n) < 3.0);
-                            points = p ? parseFloat(p) : 0;
-                        }
-                    }
+                    if (rate > 5) { // Only save if it looks like a real rate
+                        // APR is usually the second decimal in the block
+                        const allDecimals = block.match(/(\d+\.\d+)/g);
+                        const apr = allDecimals && allDecimals.length > 1 ? parseFloat(allDecimals[1]) : rate + 0.25;
+                        
+                        // Points are usually a small number (0.xxx or 1.xxx)
+                        const points = allDecimals && allDecimals.length > 2 ? parseFloat(allDecimals[allDecimals.length-1]) : 0;
 
-                    // 3. APR: Usually the second number in the 5-9% range
-                    let apr = 0;
-                    const aprMatches = block.match(/(\d+\.\d+)/g);
-                    if (aprMatches) {
-                        const possibleAPRs = aprMatches.filter(n => parseFloat(n) >= rate && parseFloat(n) < 10);
-                        apr = possibleAPRs.length > 1 ? parseFloat(possibleAPRs[1]) : rate + 0.15;
-                    }
-
-                    if (rate > 0) {
                         results.push({
                             lender: lender.name,
                             product: prod.type,
                             date: today,
                             rate: rate,
-                            apr: apr,
-                            points: points,
+                            apr: apr > rate ? apr : rate + 0.2,
+                            points: points < 3 ? points : 0,
                             timestamp: admin.firestore.FieldValue.serverTimestamp()
                         });
-                        console.log(`✅ ${lender.name} ${prod.type}: Rate ${rate}% | APR ${apr}% | Points ${points}`);
+                        console.log(`✅ ${lender.name} ${prod.type}: ${rate}% (APR: ${apr}%)`);
                     }
                 } else {
-                    console.warn(`⚠️ ${lender.name}: Could not find keywords for ${prod.type}`);
+                    console.warn(`⚠️ ${lender.name}: Keyword mismatch for ${prod.type}`);
                 }
             }
         } catch (err) {
-            console.error(`❌ ${lender.name} Failed: ${err.message}`);
+            console.error(`❌ ${lender.name} Error: ${err.message}`);
         }
     }
 
@@ -112,8 +89,8 @@ async function run() {
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(`Success! Saved ${results.length} updates.`);
+        console.log(`Database updated with ${results.length} items.`);
     }
 }
 
-run().catch(err => console.error("GLOBAL ERROR:", err));
+run();
