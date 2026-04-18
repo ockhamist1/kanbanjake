@@ -14,8 +14,9 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Snatches the first real interest rate (4.5% to 9.5%)
+// Snatches a rate (looking for 4.5% to 9.5%)
 const findActualRate = (text) => {
+    // Looks for numbers like 6.125 or 7.0 followed by % or in a table cell
     const matches = text.match(/([4-9]\.\d{2,3})/g);
     return matches ? parseFloat(matches[0]) : 0;
 };
@@ -34,41 +35,40 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`>>> STARTING: ${lender.name}`);
         try {
-            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true`;
-            const response = await axios.get(proxyUrl, { timeout: 60000 });
+            // UPDATED: Added premium=true and increased timeout to 90s
+            // Premium proxies are much harder for Rocket/USAA to block
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true`;
             
-            // Convert everything to a clean string for searching
+            const response = await axios.get(proxyUrl, { timeout: 95000 });
+            console.log(`<<< DATA RECEIVED: ${lender.name}`);
+
             let cleanText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
             cleanText = cleanText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 
             const productConfigs = [
-                { type: '30yr Conv', keywords: ['Conventional', '30-Year Fixed', '30 Year Fixed', '30yr Fixed'] },
-                { type: '30yr VA', keywords: ['VA Fixed', '30-Year VA', '30yr VA', 'Veteran', 'V.A.'] }
+                { type: '30yr Conv', keywords: ['Conventional', '30-Year Fixed', '30yr Fixed', '30 Year Fixed'] },
+                { type: '30yr VA', keywords: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30', 'V.A.'] }
             ];
 
             for (const prod of productConfigs) {
-                // Find a massive block around the keyword
-                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,2000}`, 'i');
+                // We use a much larger 3000-character block to ensure we find the VA table
+                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,3000}`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[0];
                     const allDecimals = block.match(/(\d+\.\d+)/g);
                     
-                    // 1. Rate: Look for the first number between 4.5 and 9.0
-                    const rate = allDecimals ? parseFloat(allDecimals.find(n => parseFloat(n) >= 4.5 && parseFloat(n) <= 9.0)) : 0;
+                    const rate = allDecimals ? parseFloat(allDecimals.find(n => parseFloat(n) >= 4.5 && parseFloat(n) <= 9.5)) : 0;
 
                     if (rate > 0) {
-                        // 2. APR: Look for the number that is >= Rate but < Rate + 1.0
-                        const apr = allDecimals.find(n => {
-                            const v = parseFloat(n);
-                            return v >= rate && v < (rate + 1.2) && v !== rate;
-                        }) || (rate + 0.22);
-
-                        // 3. Points: Look for a small number (usually 0.0 to 2.5) that isn't the rate or APR
+                        // APR logic: Find the next rate in the block that is > rate
+                        const apr = allDecimals.find(n => parseFloat(n) > rate && parseFloat(n) < (rate + 1.5)) || (rate + 0.25);
+                        
+                        // Points logic: Look for small decimals < 3.0 that aren't the rate/APR
                         const points = allDecimals.find(n => {
                             const v = parseFloat(n);
-                            return v > 0 && v < 3.0 && v !== parseFloat(rate) && v !== parseFloat(apr);
+                            return v > 0 && v < 3.0 && v !== rate && v !== parseFloat(apr);
                         }) || 0;
 
                         results.push({
@@ -82,7 +82,7 @@ async function run() {
                         });
                         console.log(`   ✅ ${prod.type}: ${rate}% | APR: ${apr}% | Points: ${points}`);
                     } else {
-                        console.log(`   ⚠️ Found keywords for ${prod.type} but no valid rate in the data block.`);
+                        console.log(`   ⚠️ Keywords found for ${prod.type} but no rate in 4.5-9.5% range.`);
                     }
                 } else {
                     console.log(`   ⚠️ Keywords not found for ${prod.type}`);
