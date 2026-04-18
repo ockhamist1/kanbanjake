@@ -14,11 +14,8 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Helper to force 3 decimal places as a Number
-const format3 = (val) => {
-    return parseFloat(Number(val).toFixed(3));
-};
-
+// Helper to force 3 decimal places
+const format3 = (val) => parseFloat(Number(val).toFixed(3));
 const isSaneRate = (val) => val >= 4.5 && val <= 9.5;
 
 async function run() {
@@ -35,42 +32,55 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`>>> FETCHING: ${lender.name}`);
         try {
-            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&wait_until=networkidle`;
-            const response = await axios.get(proxyUrl, { timeout: 120000 });
+            // Added ultra-stealth parameters to get past Rocket/USAA 500 errors
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&session_number=${Math.floor(Math.random() * 1000)}`;
             
+            const response = await axios.get(proxyUrl, { timeout: 120000 });
             let data = response.data;
             if (typeof data !== 'string') data = JSON.stringify(data);
 
             const cleanText = data
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
-                .replace(/<svg\b[^>]*>([\s\S]*?)<\/svg>/gi, '')
-                .replace(/<[^>]*>/g, ' ')
+                .replace(/<[^>]*>/g, '|') // Using pipe to preserve "cell" boundaries
                 .replace(/\s+/g, ' ');
 
             const configs = [
                 { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['30-Year VA', '30 Year VA', 'VA Loan', 'Veteran', 'VA Fixed'] }
+                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'VA Fixed'] }
             ];
 
             for (const conf of configs) {
-                // Expanded search window to 2500 chars to find VA tables buried at the bottom
-                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,2500})`, 'i');
+                // Search for the product name
+                const regex = new RegExp(`(${conf.keys.join('|')})([^|]{1,1500})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[2];
-                    const rateMatches = block.match(/(\d+\.\d+)(?=\s?%)/g) || block.match(/(\d+\.\d+)/g);
+                    // Find all decimals in the block
+                    const decimals = block.match(/(\d+\.\d+)/g);
                     
-                    if (rateMatches) {
-                        const nums = rateMatches.map(n => parseFloat(n));
+                    if (decimals) {
+                        const nums = decimals.map(n => parseFloat(n));
+                        
+                        // 1. RATE: First number in 4.5-9.5 range
                         const rawRate = nums.find(n => isSaneRate(n));
                         
                         if (rawRate) {
-                            const rawApr = nums.find(n => n > rawRate && n < rawRate + 1.2) || (rawRate + 0.25);
-                            const rawPoints = nums.find(n => n > 0 && n < 3.0 && n !== rawRate && n !== rawApr) || 0;
+                            // 2. APR: The next number in the range that isn't the rate
+                            const rawApr = nums.find(n => isSaneRate(n) && n !== rawRate) || (rawRate + 0.22);
+                            
+                            // 3. POINTS: Look specifically for the word "Points" OR take the smallest decimal
+                            let rawPoints = 0;
+                            const pointWordMatch = block.match(/(?:points|discount|origination)[^|]{1,50}(\d+\.\d+)/i);
+                            
+                            if (pointWordMatch) {
+                                rawPoints = parseFloat(pointWordMatch[1]);
+                            } else {
+                                // Fallback: Take the decimal that isn't Rate or APR
+                                rawPoints = nums.find(n => n < 3.5 && n !== rawRate && n !== rawApr) || 0;
+                            }
 
-                            // Apply the 3-decimal precision here
                             const rate = format3(rawRate);
                             const apr = format3(rawApr);
                             const points = format3(rawPoints);
@@ -79,11 +89,9 @@ async function run() {
                                 lender: lender.name, product: conf.id, date: today,
                                 rate, apr, points, timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
-                            console.log(`   ✅ ${conf.id}: ${rate.toFixed(3)}% | APR: ${apr.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
+                            console.log(`   ✅ ${conf.id}: Rate ${rate.toFixed(3)}% | APR ${apr.toFixed(3)}% | Pts ${points.toFixed(3)}`);
                         }
                     }
-                } else {
-                    console.log(`   ⚠️ Keywords not found for ${conf.id}`);
                 }
             }
         } catch (err) {
@@ -92,14 +100,13 @@ async function run() {
     }
 
     if (results.length > 0) {
-        console.log(`>>> SAVING: ${results.length} items to Firebase.`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(">>> UPDATE COMPLETE.");
+        console.log(`>>> SAVED: ${results.length} records.`);
     }
 }
 
