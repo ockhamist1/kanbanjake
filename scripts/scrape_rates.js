@@ -9,7 +9,8 @@ if (!admin.apps.length) { admin.initializeApp({ credential: admin.credential.cer
 const db = admin.firestore();
 
 const format3 = (val) => parseFloat(Number(val).toFixed(3));
-const isSaneRate = (val) => val >= 4.5 && val <= 9.0;
+// Updated to accept whole numbers like 5% or 6%
+const isSaneRate = (val) => val >= 4.0 && val <= 9.5;
 
 async function run() {
     const today = new Date().toISOString().split('T')[0];
@@ -17,61 +18,61 @@ async function run() {
 
     const LENDERS = [
         { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates', render: true },
-        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html', render: false },
+        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html', render: true },
         { name: 'Rocket', url: 'https://www.rocketmortgage.com/mortgage-rates', render: true },
-        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/', render: false }
+        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/', render: true }
     ];
 
     for (const lender of LENDERS) {
-        console.log(`>>> ATTEMPTING: ${lender.name} (Render: ${lender.render})`);
+        console.log(`>>> ATTEMPTING: ${lender.name}`);
         try {
-            // Reduced rendering intensity to speed up the proxy
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&premium=true&country_code=us&render=${lender.render}`;
+            const response = await axios.get(proxyUrl, { timeout: 60000 });
             
-            // 45-second timeout is plenty. If it takes longer, the bank is blocking us anyway.
-            const response = await axios.get(proxyUrl, { timeout: 45000 });
-            console.log(`   <<< RECEIVED: ${lender.name} (${response.data.length} bytes)`);
-
-            const cleanText = response.data
+            let rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            
+            // Clean text but keep numbers and common rate symbols
+            const cleanText = rawData
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
                 .replace(/<[^>]*>/g, ' | ')
                 .replace(/\s+/g, ' ');
 
             const configs = [
-                { id: '30yr Conv', keys: ['30-Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['VA Loan', 'Veteran'] }
+                { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
+                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'Veteran'] }
             ];
 
             for (const conf of configs) {
-                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,1500}`, 'i');
+                // Look for keywords and grab a large chunk of text following it
+                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,2000}`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[0];
-                    const decimals = block.match(/(\d+\.\d+)/g);
-                    if (decimals) {
-                        const nums = decimals.map(n => parseFloat(n));
+                    // Updated Regex: finds numbers with OR without decimals
+                    const numbers = block.match(/(\d+(?:\.\d+)?)/g);
+                    
+                    if (numbers) {
+                        const nums = numbers.map(n => parseFloat(n));
                         const rate = nums.find(n => isSaneRate(n));
+                        
                         if (rate) {
                             const apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.25);
-                            const points = nums.find(n => n < 3.5 && n !== rate && n !== apr) || 0;
+                            const points = nums.find(n => n > 0 && n < 3.5 && n !== rate && n !== apr) || 0;
                             
                             results.push({
                                 lender: lender.name, product: conf.id, date: today,
                                 rate: format3(rate), apr: format3(apr), points: format3(points),
                                 timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
-                            console.log(`      ✅ FOUND ${conf.id}: ${rate.toFixed(3)}%`);
+                            console.log(`      ✅ FOUND ${lender.name} ${conf.id}: ${rate.toFixed(3)}% (Pts: ${points.toFixed(3)})`);
                         }
                     }
                 }
             }
         } catch (err) {
             console.error(`   ❌ ${lender.name} FAILED: ${err.message}`);
-            if (err.response && err.response.status === 403) {
-                console.error("      !!! ALERT: ScraperAPI Credits potentially exhausted or IP blocked.");
-            }
         }
     }
 
@@ -83,8 +84,7 @@ async function run() {
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-    } else {
-        console.error(">>> ERROR: No rates were found across all lenders.");
+        console.log(">>> UPDATE COMPLETE.");
     }
 }
 
