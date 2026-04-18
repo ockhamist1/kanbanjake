@@ -30,7 +30,7 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
 
-        /* Kanban Badges */
+        /* KANBAN COLORS RESTORED */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
         .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
@@ -39,10 +39,8 @@
         .badge-none { display: none; }
 
         .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
         .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
-        
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
 
@@ -107,7 +105,7 @@
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Reddit Deals</h2></div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
@@ -151,11 +149,10 @@
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- RATE CHARTS (Fixed Scaling) ---
+        // --- RATES (Fixed Scaling) ---
         function initRateCharts() {
             const commonOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom', labels: { color: '#888', font: { size: 10, weight: 'bold' } } },
                     tooltip: {
@@ -163,15 +160,14 @@
                         callbacks: {
                             label: (ctx) => {
                                 const d = ctx.raw;
-                                return [` ${ctx.dataset.label}: ${d.y.toFixed(3)}%`, ` APR: ${d.apr.toFixed(3)}%`, ` Points: ${d.points.toFixed(3)}` ];
+                                return [` ${ctx.dataset.label}: ${d.y.toFixed(3)}%`, ` APR: ${d.apr.toFixed(3)}%`, ` Pts: ${d.points.toFixed(3)}` ];
                             }
                         }
                     }
                 },
                 scales: {
                     y: { 
-                        beginAtZero: false,
-                        grace: '15%', // This fixes the clipping problem
+                        grace: '20%', // This forces the chart to show the 6.5% Rocket rate
                         grid: { color: 'rgba(255,255,255,0.05)' }, 
                         ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } 
                     },
@@ -209,7 +205,7 @@
             chart.update();
         }
 
-        // --- FEEDS (RESTORED REDDIT) ---
+        // --- FEEDS (Fixed Reddit CORS) ---
         async function fetchFeeds() {
             const feeds = [
                 { id: 'news-container', url: 'https://apnews.com/hub/ap-top-news.rss' },
@@ -221,7 +217,7 @@
                     const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`);
                     const data = await r.json();
                     container.innerHTML = '';
-                    data.items.forEach(i => {
+                    data.items.slice(0, 10).forEach(i => {
                         const div = document.createElement('div'); div.className = 'card';
                         div.innerHTML = `<b>${i.title}</b>`;
                         div.onclick = () => window.open(i.link, '_blank');
@@ -231,12 +227,11 @@
             }
         }
 
-        // --- KANBAN (Fixed Drag Logic) ---
+        // --- KANBAN (Fixed Freeze Bug) ---
         function initSortable() {
             ['todo', 'doing', 'done'].forEach(st => {
                 new Sortable(document.getElementById(`${st}-list`), {
-                    group: 'kanban',
-                    animation: 150,
+                    group: 'kanban', animation: 150,
                     onEnd: async (e) => {
                         const taskId = e.item.getAttribute('data-id');
                         const status = e.to.id.split('-')[0];
@@ -255,6 +250,7 @@
                     card.className = 'card'; card.setAttribute('data-id', d.id);
                     card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
                     card.onclick = () => {
+                        curTaskId = d.id;
                         document.getElementById('modal-title-display').value = t.text;
                         document.getElementById('modal-notes').value = t.notes || '';
                         document.getElementById('modal-label-select').value = t.label || 'none';
@@ -265,6 +261,7 @@
             });
         });
 
+        // --- WIKI ---
         onSnapshot(collection(db, "wiki"), (s) => {
             const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
             s.docs.forEach(d => {
@@ -300,6 +297,11 @@
             });
         };
         document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => showView(b.getAttribute('data-view')));
+
+        // Modal Updates
+        let curTaskId = null;
+        document.getElementById('modal-label-select').onchange = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); };
+        document.getElementById('modal-notes').oninput = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
     </script>
 </body>
 </html>
