@@ -9,42 +9,47 @@ if (!admin.apps.length) { admin.initializeApp({ credential: admin.credential.cer
 const db = admin.firestore();
 
 const format3 = (val) => parseFloat(Number(val).toFixed(3));
-const isSaneRate = (val) => val >= 4.0 && val <= 9.5;
+const isSaneRate = (val) => val >= 4.5 && val <= 9.0;
 
 async function run() {
     const today = new Date().toISOString().split('T')[0];
     const results = [];
 
     const LENDERS = [
-        { name: 'PenFed', url: 'https://www.penfed.org/mortgages/mortgage-rates/_jcr_content/root/container/main-container/mortgage_rate_table.model.json', type: 'json' },
-        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html', type: 'html' },
-        { name: 'Rocket', url: 'https://www.rocketmortgage.com/api/rates/mortgage', type: 'json' },
-        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/', type: 'html' }
+        { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
+        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
+        { name: 'Rocket', url: 'https://www.rocketmortgage.com/mortgage-rates' },
+        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
     ];
 
     for (const lender of LENDERS) {
-        console.log(`>>> STARTING: ${lender.name}`);
+        console.log(`>>> FETCHING: ${lender.name}`);
         try {
-            // We use a high-quality session and a fixed rendering wait
-            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&premium=true&country_code=us&render=${lender.type === 'html'}`;
+            // Using US Proxy + Render + Premium for maximum stealth
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us`;
             
-            const response = await axios.get(proxyUrl, { timeout: 90000 });
-            const data = response.data;
-            const contentString = typeof data === 'string' ? data : JSON.stringify(data);
+            const response = await axios.get(proxyUrl, { timeout: 120000 });
+            let data = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+
+            // Strip the junk but keep pipes | to separate the table columns
+            const cleanText = data
+                .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
+                .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
+                .replace(/<[^>]*>/g, ' | ')
+                .replace(/\s+/g, ' ');
 
             const configs = [
-                { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['VA Loan', '30-Year VA', 'Veteran'] }
+                { id: '30yr Conv', keys: ['30-Year Fixed', '30yr Fixed', 'Conventional'] },
+                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30'] }
             ];
 
             for (const conf of configs) {
-                // Find a block of text around the product name
-                const regex = new RegExp(`(${conf.keys.join('|')})[^}]{1,2000}`, 'i');
-                const match = contentString.match(regex);
+                // Look for the product name and grab the next 1500 characters
+                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,1500}`, 'i');
+                const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[0];
-                    // Look for decimal numbers (Rate, APR, and Points)
                     const decimals = block.match(/(\d+\.\d+)/g);
                     
                     if (decimals && decimals.length >= 1) {
@@ -54,12 +59,12 @@ async function run() {
                         const rawRate = nums.find(n => isSaneRate(n));
                         
                         if (rawRate) {
-                            // 2. APR: The next number in the range that isn't the rate
+                            // 2. APR: The next rate-like number in the block
                             const rawApr = nums.find(n => isSaneRate(n) && n !== rawRate) || (rawRate + 0.25);
                             
-                            // 3. POINTS: The first small number (< 3.0) that isn't the Rate or APR
-                            // This positional logic is the most reliable way to catch points
-                            const rawPoints = nums.find(n => n < 3.0 && n !== rawRate && n !== rawApr) || 0;
+                            // 3. POINTS: The smallest decimal in the row that isn't the Rate or APR
+                            // This is what successfully found the 0.250 for NFCU!
+                            const rawPoints = nums.find(n => n < 3.5 && n !== rawRate && n !== rawApr) || 0;
 
                             const rate = format3(rawRate);
                             const apr = format3(rawApr);
@@ -80,13 +85,14 @@ async function run() {
     }
 
     if (results.length > 0) {
+        console.log(`>>> SAVING: ${results.length} records to Firebase.`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(`>>> SUCCESS: Saved ${results.length} records.`);
+        console.log(">>> UPDATE COMPLETE.");
     }
 }
 
