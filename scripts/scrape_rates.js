@@ -14,7 +14,7 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Sane range for today's market (4.5% to 9.5%)
+// Looking for a rate between 4.5% and 9.5%
 const isSaneRate = (val) => val >= 4.5 && val <= 9.5;
 
 async function run() {
@@ -31,39 +31,37 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`>>> FETCHING: ${lender.name}`);
         try {
-            // Using PREMIUM + US PROXY + RENDER + EXTRA WAIT
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&wait_until=networkidle`;
-            
-            // Increased timeout to 120 seconds per lender
             const response = await axios.get(proxyUrl, { timeout: 120000 });
-            console.log(`<<< SUCCESS: ${lender.name} (Bytes: ${JSON.stringify(response.data).length})`);
             
-            const raw = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            // Clean up tags but preserve some spacing
-            const clean = raw.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/g, '')
-                             .replace(/<[^>]*>/g, '|')
-                             .replace(/\s+/g, ' ');
+            // Clean the data: remove tags but keep numbers and decimals intact
+            let cleanText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            cleanText = cleanText.replace(/<[^>]*>/g, ' | ').replace(/\s+/g, ' ');
 
             const configs = [
-                { id: '30yr Conv', keys: ['Conventional', '30-Year Fixed', '30 Year Fixed'] },
-                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30'] }
+                { id: '30yr Conv', keys: ['Conventional', '30-Year Fixed', '30 Year Fixed', '30yr Fixed'] },
+                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30', 'V.A.'] }
             ];
 
             for (const conf of configs) {
-                // Find all text blocks around these keywords
-                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,1000}`, 'gi');
-                const matches = clean.match(regex);
+                // Search 2000 characters around the product name
+                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,2000}`, 'i');
+                const match = cleanText.match(regex);
 
-                if (matches) {
-                    for (const block of matches) {
-                        const decimals = block.match(/(\d+\.\d+)/g);
-                        if (!decimals) continue;
-
+                if (match) {
+                    const block = match[0];
+                    // Find ALL decimal numbers in this block
+                    const decimals = block.match(/(\d+\.\d+)/g);
+                    
+                    if (decimals) {
                         const nums = decimals.map(n => parseFloat(n));
+                        // The Rate is the first number in the 4.5 - 9.5 range
                         const rate = nums.find(n => isSaneRate(n));
                         
                         if (rate) {
+                            // APR is the next number >= Rate
                             const apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.23);
+                            // Points is any small number < 3.0 that isn't the rate or APR
                             const points = nums.find(n => n > 0 && n < 3.0 && n !== rate && n !== apr) || 0;
 
                             results.push({
@@ -71,9 +69,12 @@ async function run() {
                                 rate, apr, points, timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
                             console.log(`   ✅ ${conf.id}: ${rate}% (Points: ${points})`);
-                            break; // Stop once we find the first valid match for this product
+                        } else {
+                            console.log(`   ⚠️ Found keywords for ${conf.id}, but no rate in 4.5-9.5 range. Snippet: ${block.substring(0, 150)}`);
                         }
                     }
+                } else {
+                    console.log(`   ⚠️ Keywords not found for ${conf.id}`);
                 }
             }
         } catch (err) {
@@ -82,7 +83,7 @@ async function run() {
     }
 
     if (results.length > 0) {
-        console.log(`>>> SAVING TO FIREBASE: ${results.length} records`);
+        console.log(`>>> SAVING: Pushing ${results.length} records...`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
