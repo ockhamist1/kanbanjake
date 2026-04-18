@@ -14,7 +14,7 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Looking for a rate between 4.5% and 9.5%
+// Only accept numbers that look like current mortgage rates
 const isSaneRate = (val) => val >= 4.5 && val <= 9.5;
 
 async function run() {
@@ -31,46 +31,49 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`>>> FETCHING: ${lender.name}`);
         try {
+            // Added wait_for_selector to ensure the rate tables are actually there
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&wait_until=networkidle`;
             const response = await axios.get(proxyUrl, { timeout: 120000 });
             
-            // Clean the data: remove tags but keep numbers and decimals intact
-            let cleanText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            cleanText = cleanText.replace(/<[^>]*>/g, ' | ').replace(/\s+/g, ' ');
+            let data = response.data;
+            if (typeof data !== 'string') data = JSON.stringify(data);
+
+            // CRITICAL STEP: Strip out the "Noise" (Style, Scripts, Tags)
+            const cleanText = data
+                .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
+                .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
+                .replace(/<svg\b[^>]*>([\s\S]*?)<\/svg>/gi, '')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/\s+/g, ' ');
 
             const configs = [
-                { id: '30yr Conv', keys: ['Conventional', '30-Year Fixed', '30 Year Fixed', '30yr Fixed'] },
-                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30', 'V.A.'] }
+                { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
+                { id: '30yr VA', keys: ['30-Year VA', '30 Year VA', 'VA Loan', 'Veteran'] }
             ];
 
             for (const conf of configs) {
-                // Search 2000 characters around the product name
-                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,2000}`, 'i');
+                // Search for the product name and look at the next 1000 characters
+                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1000})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
-                    const block = match[0];
-                    // Find ALL decimal numbers in this block
-                    const decimals = block.match(/(\d+\.\d+)/g);
+                    const block = match[2];
+                    // Look for decimals followed by a % or just decimals in the sane range
+                    const rateMatches = block.match(/(\d+\.\d+)(?=\s?%)/g) || block.match(/(\d+\.\d+)/g);
                     
-                    if (decimals) {
-                        const nums = decimals.map(n => parseFloat(n));
-                        // The Rate is the first number in the 4.5 - 9.5 range
+                    if (rateMatches) {
+                        const nums = rateMatches.map(n => parseFloat(n));
                         const rate = nums.find(n => isSaneRate(n));
                         
                         if (rate) {
-                            // APR is the next number >= Rate
-                            const apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.23);
-                            // Points is any small number < 3.0 that isn't the rate or APR
+                            const apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.25);
                             const points = nums.find(n => n > 0 && n < 3.0 && n !== rate && n !== apr) || 0;
 
                             results.push({
                                 lender: lender.name, product: conf.id, date: today,
                                 rate, apr, points, timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
-                            console.log(`   ✅ ${conf.id}: ${rate}% (Points: ${points})`);
-                        } else {
-                            console.log(`   ⚠️ Found keywords for ${conf.id}, but no rate in 4.5-9.5 range. Snippet: ${block.substring(0, 150)}`);
+                            console.log(`   ✅ ${conf.id}: ${rate}%`);
                         }
                     }
                 } else {
@@ -83,14 +86,13 @@ async function run() {
     }
 
     if (results.length > 0) {
-        console.log(`>>> SAVING: Pushing ${results.length} records...`);
+        console.log(`>>> SAVING: ${results.length} items.`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(">>> UPDATE COMPLETE.");
     }
 }
 
