@@ -22,23 +22,21 @@ async function run() {
         { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
     ];
 
-    // Create a unique session ID for this entire run
     const session = Math.floor(Math.random() * 99999);
 
     for (const lender of LENDERS) {
         console.log(`>>> GHOST FETCH: ${lender.name}`);
         try {
-            // Added device_type=desktop and keep_headers=true for maximum stealth
             const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&session_number=${session}&device_type=desktop&keep_headers=true`;
             
             const response = await axios.get(proxyUrl, { timeout: 90000 });
-            console.log(`   <<< DATA RECEIVED: ${lender.name} (${response.data.length} bytes)`);
+            let rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
 
-            let cleanText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            cleanText = cleanText
+            // Clean text: remove scripts/styles but keep the layout mostly flat
+            const cleanText = rawData
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
-                .replace(/<[^>]*>/g, ' | ')
+                .replace(/<[^>]*>/g, ' ') 
                 .replace(/\s+/g, ' ');
 
             const configs = [
@@ -47,19 +45,25 @@ async function run() {
             ];
 
             for (const conf of configs) {
-                const regex = new RegExp(`(${conf.keys.join('|')})[^|]{1,2000}`, 'i');
+                // Look for keywords and grab the next 1000 characters (ignoring cell boundaries)
+                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1000})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
-                    const block = match[0];
+                    const block = match[2];
+                    // Look for all numbers (integers or decimals)
                     const decimals = block.match(/(\d+(?:\.\d+)?)/g);
                     
                     if (decimals) {
                         const nums = decimals.map(n => parseFloat(n));
+                        // Find the interest rate first
                         const rate = nums.find(n => isSaneRate(n));
                         
                         if (rate) {
-                            const apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.25);
+                            // APR: The next rate-like number in the block
+                            const apr = nums.find(n => isSaneRate(n) && n !== rate) || (rate + 0.21);
+                            
+                            // Points: The smallest decimal in the block (usually < 3.0)
                             const points = nums.find(n => n > 0 && n < 3.5 && n !== rate && n !== apr) || 0;
                             
                             results.push({
@@ -67,13 +71,12 @@ async function run() {
                                 rate: format3(rate), apr: format3(apr), points: format3(points),
                                 timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
-                            console.log(`      ✅ FOUND ${lender.name} ${conf.id}: ${rate.toFixed(3)}% (Pts: ${points.toFixed(3)})`);
+                            console.log(`      ✅ FOUND ${lender.name} ${conf.id}: ${rate.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
                         }
                     }
                 }
             }
-            // Small human-like pause between lenders
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
         } catch (err) {
             console.error(`   ❌ ${lender.name} FAILED: ${err.message}`);
@@ -88,6 +91,9 @@ async function run() {
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
+        console.log(">>> UPDATE COMPLETE.");
+    } else {
+        console.log(">>> No rates found in the data received.");
     }
 }
 
