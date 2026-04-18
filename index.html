@@ -30,7 +30,7 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-pane { padding: 20px; flex-grow: 1; display: none; flex-direction: column; overflow-y: auto; box-sizing: border-box; }
 
-        /* Kanban Color Badges */
+        /* Kanban Badges */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
         .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
@@ -38,16 +38,13 @@
         .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
         .badge-none { display: none; }
 
-        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.1s; }
-        .card:active { transform: scale(0.98); }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
         .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; background: none; border: none; text-align: left; color: inherit; width: 100%; display: block; }
         .nav-item:hover, .nav-item.active { background: var(--nav-hover); font-weight: 600; }
         
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
-
-        .news-card.read { opacity: 0.3; filter: grayscale(1); }
 
         @media (max-width: 768px) { #sidebar { display: none; } .column { min-width: 85vw !important; } }
     </style>
@@ -105,17 +102,17 @@
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2><button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>AP News Feed</h2></div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2><button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h2>🎁 Deals Feed</h2></div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px; margin-top:15px;"></div>
             </div>
 
             <div id="wiki-content-view" class="view-pane">
-                <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;">
+                <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;" readonly>
                 <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
             </div>
         </div>
@@ -147,14 +144,14 @@
         const firebaseConfig = { apiKey: "AIzaSyBrD9wri02pLZARr8BI600KTCbuIBTH1MI", authDomain: "kanbanjake.firebaseapp.com", projectId: "kanbanjake", storageBucket: "kanbanjake.firebasestorage.app", messagingSenderId: "207756213915", appId: "1:207756213915:web:2f546c9a9c7d28b189103e" };
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app); const provider = new GoogleAuthProvider();
         
-        let allTasks = [], convChart, vaChart;
+        let convChart, vaChart;
 
         // --- THEME ---
         const applyTheme = (t) => { document.body.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- MORTGAGE RATE LOGIC ---
+        // --- RATE CHARTS (Fixed Scaling) ---
         function initRateCharts() {
             const commonOptions = {
                 responsive: true,
@@ -166,13 +163,18 @@
                         callbacks: {
                             label: (ctx) => {
                                 const d = ctx.raw;
-                                return [` ${ctx.dataset.label}: ${d.y.toFixed(3)}%`, ` APR: ${d.apr.toFixed(3)}%`, ` Points: ${d.points.toFixed(3)}`];
+                                return [` ${ctx.dataset.label}: ${d.y.toFixed(3)}%`, ` APR: ${d.apr.toFixed(3)}%`, ` Points: ${d.points.toFixed(3)}` ];
                             }
                         }
                     }
                 },
                 scales: {
-                    y: { grace: '10%', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } },
+                    y: { 
+                        beginAtZero: false,
+                        grace: '15%', // This fixes the clipping problem
+                        grid: { color: 'rgba(255,255,255,0.05)' }, 
+                        ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } 
+                    },
                     x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
                 }
             };
@@ -202,67 +204,55 @@
                     return e ? { x: date, y: parseFloat(e.rate), apr: parseFloat(e.apr), points: parseFloat(e.points) } : null;
                 }),
                 borderColor: colors[lender], backgroundColor: colors[lender],
-                tension: 0.3, borderWidth: 2, spanGaps: true
+                tension: 0.3, borderWidth: 2, spanGaps: true, pointRadius: 4
             }));
             chart.update();
         }
 
-        // --- FEED LOGIC ---
-        window.fetchAP = async () => {
-            const c = document.getElementById('news-container'); c.innerHTML = '<p>Syncing...</p>';
-            try {
-                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://apnews.com/hub/ap-top-news.rss')}`);
-                const data = await r.json();
-                c.innerHTML = '';
-                data.items.forEach(i => {
-                    const div = document.createElement('div'); div.className = 'card';
-                    div.innerHTML = `<b>${i.title}</b>`;
-                    div.onclick = () => window.open(i.link, '_blank');
-                    c.appendChild(div);
-                });
-            } catch(e) { c.innerHTML = '<p style="color:red">AP Signal Blocked.</p>'; }
-        };
+        // --- FEEDS (RESTORED REDDIT) ---
+        async function fetchFeeds() {
+            const feeds = [
+                { id: 'news-container', url: 'https://apnews.com/hub/ap-top-news.rss' },
+                { id: 'freebies-container', url: 'https://www.reddit.com/r/freebies/.rss' }
+            ];
+            for (const feed of feeds) {
+                const container = document.getElementById(feed.id);
+                try {
+                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`);
+                    const data = await r.json();
+                    container.innerHTML = '';
+                    data.items.forEach(i => {
+                        const div = document.createElement('div'); div.className = 'card';
+                        div.innerHTML = `<b>${i.title}</b>`;
+                        div.onclick = () => window.open(i.link, '_blank');
+                        container.appendChild(div);
+                    });
+                } catch(e) { container.innerHTML = '<p>Feed signal blocked.</p>'; }
+            }
+        }
 
-        window.fetchFreebies = async () => {
-            const c = document.getElementById('freebies-container'); c.innerHTML = '<p>Syncing...</p>';
-            try {
-                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.reddit.com/r/freebies/.rss')}`);
-                const data = await r.json();
-                c.innerHTML = '';
-                data.items.forEach(i => {
-                    const div = document.createElement('div'); div.className = 'card';
-                    div.innerHTML = `<b>${i.title}</b>`;
-                    div.onclick = () => window.open(i.link, '_blank');
-                    c.appendChild(div);
-                });
-            } catch(e) { c.innerHTML = '<p style="color:red">Reddit RSS Signal Blocked.</p>'; }
-        };
-
-        // --- KANBAN & WIKI ---
-        function initKanban() {
+        // --- KANBAN (Fixed Drag Logic) ---
+        function initSortable() {
             ['todo', 'doing', 'done'].forEach(st => {
                 new Sortable(document.getElementById(`${st}-list`), {
                     group: 'kanban',
                     animation: 150,
                     onEnd: async (e) => {
                         const taskId = e.item.getAttribute('data-id');
-                        const newStatus = e.to.id.split('-')[0];
-                        await updateDoc(doc(db, 'tasks', taskId), { status: newStatus });
+                        const status = e.to.id.split('-')[0];
+                        await updateDoc(doc(db, 'tasks', taskId), { status });
                     }
                 });
             });
         }
 
         onSnapshot(collection(db, "tasks"), (s) => {
-            allTasks = s.docs;
-            ['todo', 'doing', 'done'].forEach(st => {
-                const list = document.getElementById(`${st}-list`);
-                list.innerHTML = '';
-                allTasks.filter(d => d.data().status === st).forEach(d => {
+            ['todo','doing','done'].forEach(st => {
+                const list = document.getElementById(`${st}-list`); list.innerHTML = '';
+                s.docs.filter(d => d.data().status === st).forEach(d => {
                     const t = d.data();
                     const card = document.createElement('div');
-                    card.className = 'card';
-                    card.setAttribute('data-id', d.id);
+                    card.className = 'card'; card.setAttribute('data-id', d.id);
                     card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
                     card.onclick = () => {
                         document.getElementById('modal-title-display').value = t.text;
@@ -282,17 +272,17 @@
                 btn.onclick = () => {
                     document.getElementById('wiki-title-display').value = d.data().title;
                     document.getElementById('wiki-preview').innerHTML = marked.parse(d.data().content || '');
-                    showView('wiki-content-view');
+                    window.showView('wiki-content-view');
                 };
                 sList.appendChild(btn);
             });
         });
 
-        // --- INITIALIZATION ---
+        // --- INIT ---
         onAuthStateChanged(auth, (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
-                initRateCharts(); loadRateData(); initKanban(); fetchAP(); fetchFreebies();
+                initRateCharts(); loadRateData(); initSortable(); fetchFeeds();
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
         
@@ -309,7 +299,6 @@
                 if(n.getAttribute('data-view') === vid) n.classList.add('active');
             });
         };
-
         document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => showView(b.getAttribute('data-view')));
     </script>
 </body>
