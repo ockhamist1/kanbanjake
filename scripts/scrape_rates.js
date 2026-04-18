@@ -39,56 +39,60 @@ async function run() {
                 .replace(/\s+/g, ' ');
 
             const configs = [
-                { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', '30-Year VA'] }
+                { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional', 'CONV'] },
+                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran', '30-Year VA', 'VA 30'] }
             ];
+
+            let lenderFoundCount = 0;
 
             for (const conf of configs) {
                 let rate = 0, apr = 0, points = 0;
 
-                // 1. SCAN THE VISIBLE TEXT (Table View)
-                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1200})`, 'i');
+                // 1. SCAN THE VISIBLE TEXT (Improved window and keywords)
+                const regex = new RegExp(`(${conf.keys.join('|')})(.{1,2000})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[2];
-                    const decimals = block.match(/(\d+\.\d+)/g); // Only look for actual decimals first
+                    const decimals = block.match(/(\d+\.\d+)/g);
                     if (decimals) {
                         const nums = decimals.map(n => parseFloat(n));
                         rate = nums.find(n => isSaneRate(n));
                         if (rate) {
-                            apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.25);
-                            // Points: specifically look for a small decimal that isn't the rate or APR
+                            apr = nums.find(n => n > rate && n < rate + 1.5) || (rate + 0.25);
                             points = nums.find(n => n > 0 && n < 2.5 && n !== rate && n !== apr) || 0;
                         }
                     }
                 }
 
-                // 2. JSON DEEP SCAN (For Rocket and modern Web Apps)
+                // 2. JSON DEEP SCAN (Enhanced for Rocket)
                 if (!rate) {
-                    // This regex looks for "VA" or "Conv" then finds the NEXT rate:6.125 pattern
-                    const jsonRegex = new RegExp(`(?:${conf.keys.join('|')})[\\s\\S]{1,1000}rate["\\s:]+([4-9]\\.\\d+)`, 'i');
+                    const jsonRegex = new RegExp(`(?:${conf.keys.join('|')})[\\s\\S]{1,2000}rate["\\s:]+([4-9]\\.\\d+)`, 'i');
                     const jsonMatch = rawData.match(jsonRegex);
                     if (jsonMatch) {
                         rate = parseFloat(jsonMatch[1]);
-                        // Search for points within 500 chars of where we found the rate
-                        const ptsMatch = rawData.substring(jsonMatch.index, jsonMatch.index + 500).match(/points["\\s:]+([0-2]\\.\\d+)/i);
+                        const ptsMatch = rawData.substring(jsonMatch.index, jsonMatch.index + 800).match(/points["\\s:]+([0-2]\\.\\d+)/i);
                         points = ptsMatch ? parseFloat(ptsMatch[1]) : 0;
                         apr = rate + 0.25;
                     }
                 }
 
                 if (rate) {
+                    lenderFoundCount++;
                     results.push({
                         lender: lender.name, product: conf.id, date: today,
                         rate: format3(rate), apr: format3(apr), points: format3(points),
                         timestamp: admin.firestore.FieldValue.serverTimestamp()
                     });
                     console.log(`      ✅ FOUND ${lender.name} ${conf.id}: ${rate.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
-                } else {
-                    console.log(`      ⚠️ No data found for ${lender.name} ${conf.id}`);
                 }
             }
+
+            // DEBUG: If we found NOTHING for a lender, show a snippet of what we got back
+            if (lenderFoundCount === 0) {
+                console.log(`      ⚠️ DEBUG: ${lender.name} returned content, but no rates found. First 300 chars: ${cleanText.substring(0, 300)}...`);
+            }
+
             await new Promise(resolve => setTimeout(resolve, 3000));
 
         } catch (err) {
