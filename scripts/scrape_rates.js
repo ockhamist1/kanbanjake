@@ -14,78 +14,67 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Snatches a rate (looking for 4.5% to 9.5%)
-const findActualRate = (text) => {
-    // Looks for numbers like 6.125 or 7.0 followed by % or in a table cell
-    const matches = text.match(/([4-9]\.\d{2,3})/g);
-    return matches ? parseFloat(matches[0]) : 0;
-};
-
-const LENDERS = [
-    { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
-    { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
-    { name: 'Rocket', url: 'https://www.rocketmortgage.com/mortgage-rates' },
-    { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
-];
+// Helper: Only accepts numbers that look like current mortgage rates (5.5 - 8.5)
+const isSaneRate = (val) => val >= 5.0 && val <= 9.0;
 
 async function run() {
     const today = new Date().toISOString().split('T')[0];
     const results = [];
 
+    const LENDERS = [
+        { name: 'PenFed', url: 'https://www.penfed.org/mortgage/mortgage-rates' },
+        { name: 'NFCU', url: 'https://www.navyfederal.org/loans-cards/mortgage/mortgage-rates.html' },
+        { name: 'Rocket', url: 'https://www.rocketmortgage.com/mortgage-rates' },
+        { name: 'USAA', url: 'https://www.usaa.com/banking/home-mortgages/rates/' }
+    ];
+
     for (const lender of LENDERS) {
-        console.log(`>>> STARTING: ${lender.name}`);
+        console.log(`>>> PROXY FETCH: ${lender.name}`);
         try {
-            // UPDATED: Added premium=true and increased timeout to 90s
-            // Premium proxies are much harder for Rocket/USAA to block
-            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true`;
+            // We force US proxies and add render_js=true
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us`;
+            const response = await axios.get(proxyUrl, { timeout: 120000 });
             
-            const response = await axios.get(proxyUrl, { timeout: 95000 });
-            console.log(`<<< DATA RECEIVED: ${lender.name}`);
+            const raw = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            // Clean the HTML but keep some structure for table parsing
+            const clean = raw.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/g, '')
+                             .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/g, '')
+                             .replace(/<[^>]*>/g, '|') 
+                             .replace(/\s+/g, ' ');
 
-            let cleanText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            cleanText = cleanText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-
-            const productConfigs = [
-                { type: '30yr Conv', keywords: ['Conventional', '30-Year Fixed', '30yr Fixed', '30 Year Fixed'] },
-                { type: '30yr VA', keywords: ['VA Loan', 'VA Fixed', 'Veteran', 'VA 30', 'V.A.'] }
+            const products = [
+                { id: '30yr Conv', keys: ['30-Year Fixed', 'Conventional'] },
+                { id: '30yr VA', keys: ['VA Loan', 'VA Fixed', 'Veteran'] }
             ];
 
-            for (const prod of productConfigs) {
-                // We use a much larger 3000-character block to ensure we find the VA table
-                const regex = new RegExp(`(${prod.keywords.join('|')})[\\s\\S]{1,3000}`, 'i');
-                const match = cleanText.match(regex);
+            for (const prod of products) {
+                // Find a block of text around the product name
+                const regex = new RegExp(`(${prod.keys.join('|')})[^|]{1,500}`, 'gi');
+                const matches = clean.match(regex);
 
-                if (match) {
-                    const block = match[0];
-                    const allDecimals = block.match(/(\d+\.\d+)/g);
-                    
-                    const rate = allDecimals ? parseFloat(allDecimals.find(n => parseFloat(n) >= 4.5 && parseFloat(n) <= 9.5)) : 0;
+                if (matches) {
+                    for (const block of matches) {
+                        const decimals = block.match(/(\d+\.\d+)/g);
+                        if (!decimals) continue;
 
-                    if (rate > 0) {
-                        // APR logic: Find the next rate in the block that is > rate
-                        const apr = allDecimals.find(n => parseFloat(n) > rate && parseFloat(n) < (rate + 1.5)) || (rate + 0.25);
+                        const nums = decimals.map(n => parseFloat(n));
+                        // Strategy: The Interest Rate is usually the first sane rate found.
+                        const rate = nums.find(n => isSaneRate(n));
                         
-                        // Points logic: Look for small decimals < 3.0 that aren't the rate/APR
-                        const points = allDecimals.find(n => {
-                            const v = parseFloat(n);
-                            return v > 0 && v < 3.0 && v !== rate && v !== parseFloat(apr);
-                        }) || 0;
+                        if (rate) {
+                            // APR is usually the number immediately following the rate that is slightly higher
+                            const apr = nums.find(n => n > rate && n < rate + 1.0) || (rate + 0.25);
+                            // Points are usually a small number < 3.0 that is NOT the rate or APR
+                            const points = nums.find(n => n > 0 && n < 3.0 && n !== rate && n !== apr) || 0;
 
-                        results.push({
-                            lender: lender.name,
-                            product: prod.type,
-                            date: today,
-                            rate: rate,
-                            apr: parseFloat(apr),
-                            points: parseFloat(points),
-                            timestamp: admin.firestore.FieldValue.serverTimestamp()
-                        });
-                        console.log(`   ✅ ${prod.type}: ${rate}% | APR: ${apr}% | Points: ${points}`);
-                    } else {
-                        console.log(`   ⚠️ Keywords found for ${prod.type} but no rate in 4.5-9.5% range.`);
+                            results.push({
+                                lender: lender.name, product: prod.id, date: today,
+                                rate, apr, points, timestamp: admin.firestore.FieldValue.serverTimestamp()
+                            });
+                            console.log(`   ✅ ${lender.name} ${prod.id}: ${rate}% | APR: ${apr}% | Pts: ${points}`);
+                            break; // Stop after finding the first valid row for this product
+                        }
                     }
-                } else {
-                    console.log(`   ⚠️ Keywords not found for ${prod.type}`);
                 }
             }
         } catch (err) {
@@ -94,15 +83,14 @@ async function run() {
     }
 
     if (results.length > 0) {
-        console.log(`>>> SAVING: Pushing ${results.length} records...`);
+        console.log(`>>> UPDATING FIREBASE: ${results.length} records`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(">>> SUCCESS: Database updated.");
     }
 }
 
-run().catch(err => console.error("FATAL ERROR:", err));
+run();
