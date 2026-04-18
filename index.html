@@ -32,10 +32,10 @@
 
         /* KANBAN BADGES */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
-        .badge-mortgage { background: var(--m-bg) !important; color: var(--m-txt) !important; }
-        .badge-sunday-school { background: var(--s-bg) !important; color: var(--s-txt) !important; }
-        .badge-church { background: var(--c-bg) !important; color: var(--c-txt) !important; }
-        .badge-urgent { background: var(--u-bg) !important; color: var(--u-txt) !important; }
+        .badge-mortgage { background: var(--m-bg); color: var(--m-txt); }
+        .badge-sunday-school { background: var(--s-bg); color: var(--s-txt); }
+        .badge-church { background: var(--c-bg); color: var(--c-txt); }
+        .badge-urgent { background: var(--u-bg); color: var(--u-txt); }
         .badge-none { display: none; }
 
         .card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -44,7 +44,7 @@
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; background: var(--card-bg); color: var(--text); }
 
         /* NEWS PERSISTENCE */
-        .news-card.read { opacity: 0.2; filter: grayscale(1); order: 100; }
+        .news-card.read { opacity: 0.3; filter: grayscale(1); order: 100; }
         .read-toggle { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-top: 12px; }
 
         @media (max-width: 768px) { #sidebar { display: none; } .column { min-width: 85vw !important; } }
@@ -66,8 +66,10 @@
             <button class="nav-item" data-view="rates-view">📈 Rate Intel</button>
             <button class="nav-item" data-view="news-view">📰 News</button>
             <button class="nav-item" data-view="freebies-view">🎁 Deals</button>
+            
             <div style="font-size:11px; font-weight:800; color:#888; margin:20px 0 10px 0;">WIKI</div>
             <div id="sidebar-wiki-list"></div>
+            
             <div style="margin-top:auto; display:flex; gap:10px;">
                 <button id="theme-toggle" class="nav-item" style="text-align:center; background:var(--border);">🌙 Mode</button>
                 <button id="logout-btn" class="nav-item" style="text-align:center; background:var(--border);">🚪 Out</button>
@@ -84,36 +86,51 @@
             </div>
             
             <div id="rates-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;"><h2>Mortgage Rate Intelligence</h2></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2>Mortgage Rate Intelligence</h2>
+                </div>
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
-                    <div class="card" style="padding: 20px; height: 450px;"><h3 style="margin-bottom:15px; font-size:14px;">30-Year Conventional Fixed</h3><canvas id="convChart"></canvas></div>
-                    <div class="card" style="padding: 20px; height: 450px;"><h3 style="margin-bottom:15px; font-size:14px;">30-Year VA Fixed</h3><canvas id="vaChart"></canvas></div>
+                    <div class="card" style="padding: 20px; height: 450px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">30-Year Conventional Fixed</h3>
+                        <div style="flex-grow:1; position:relative;"><canvas id="convChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: 20px; height: 450px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">30-Year VA Fixed</h3>
+                        <div style="flex-grow:1; position:relative;"><canvas id="vaChart"></canvas></div>
+                    </div>
                 </div>
             </div>
 
             <div id="news-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h2>AP News Feed</h2><button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink:0;">
+                    <h2>AP News Feed</h2>
+                    <button onclick="window.fetchAP()" class="btn">🔄 Re-Sync</button>
+                </div>
                 <div id="news-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px;"></div>
             </div>
 
             <div id="freebies-view" class="view-pane">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h2>🎁 Reddit Deals</h2><button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink:0;">
+                    <h2>🎁 Reddit Deals</h2>
+                    <button onclick="window.fetchFreebies()" class="btn">🔄 Refresh</button>
+                </div>
                 <div id="freebies-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px;"></div>
             </div>
 
             <div id="wiki-content-view" class="view-pane">
                 <input type="text" id="wiki-title-display" style="font-size:28px; font-weight:800; border:none; background:transparent; width:100%; color:inherit; margin-bottom:20px; outline:none;" readonly>
-                <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh;"></div>
+                <div id="wiki-preview" style="line-height:1.7; padding:15px; border:1px solid var(--border); border-radius:8px; min-height:60vh; box-sizing:border-box;"></div>
             </div>
         </div>
     </div>
 
     <div id="editor-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
         <div style="background:var(--card-bg); width:95%; max-width:700px; padding:30px; border-radius:12px; position:relative;">
-            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            <button id="close-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888;">&times;</button>
             <input type="text" id="modal-title-display" style="font-size:22px; font-weight:800; border:none; background:transparent; width:90%; color:inherit; outline:none;">
             <div style="margin:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:15px 0;">
-                <select id="modal-label-select" style="background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:8px; border-radius:4px; outline:none;">
+                <label style="font-size:11px; font-weight:800; color:#888;">CATEGORY:</label>
+                <select id="modal-label-select" style="margin-left:10px; background:var(--sidebar); color:var(--text); border:1px solid var(--border); padding:5px; border-radius:4px; outline:none;">
                     <option value="none">None</option>
                     <option value="mortgage">🏠 Mortgage</option>
                     <option value="sunday-school">📖 Sunday School</option>
@@ -140,15 +157,32 @@
         applyTheme(localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').onclick = () => applyTheme(document.body.getAttribute('data-theme')==='dark'?'light':'dark');
 
-        // --- CHART LOGIC (Hardened) ---
+        // --- CHART LOGIC (Fixed String Match & Clipping) ---
         function initRateCharts() {
             const commonOptions = {
                 responsive: true, maintainAspectRatio: false,
-                scales: {
-                    y: { suggestedMin: 4.5, suggestedMax: 7.5, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } },
-                    x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#888', font: { size: 10, weight: 'bold' } } },
+                    tooltip: {
+                        backgroundColor: 'rgba(30, 30, 30, 0.9)',
+                        callbacks: {
+                            label: (ctx) => {
+                                const d = ctx.raw;
+                                return [` ${ctx.dataset.label}: ${d.y.toFixed(3)}%`, ` APR: ${d.apr.toFixed(3)}%`, ` Pts: ${d.points.toFixed(3)}` ];
+                            }
+                        }
+                    }
                 },
-                plugins: { legend: { position: 'bottom', labels: { color: '#888', font: { size: 10, weight: 'bold' } } } }
+                scales: {
+                    y: { 
+                        beginAtZero: false,
+                        suggestedMin: 4.5,
+                        suggestedMax: 7.5, // Explicitly open for Rocket 6.5%
+                        grid: { color: 'rgba(255,255,255,0.05)' }, 
+                        ticks: { color: '#888', callback: v => v.toFixed(2) + '%' } 
+                    },
+                    x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+                }
             };
             convChart = new Chart(document.getElementById('convChart'), { type: 'line', data: { datasets: [] }, options: commonOptions });
             vaChart = new Chart(document.getElementById('vaChart'), { type: 'line', data: { datasets: [] }, options: commonOptions });
@@ -158,7 +192,7 @@
             const lenders = ["PenFed", "NFCU", "Rocket", "USAA"];
             const colors = { "PenFed": "gray", "NFCU": "#22c55e", "Rocket": "#ef4444", "USAA": "#12395B" };
             
-            // Loose string match to prevent spacing bugs
+            // FUZZY MATCH: Case-insensitive and trimmed to catch "30yr Conv" vs "30yr conv "
             const productData = allData.filter(d => d.product.trim().toLowerCase() === productType.trim().toLowerCase());
             const labels = [...new Set(productData.map(d => d.date))].sort();
             
@@ -166,31 +200,45 @@
             chart.data.datasets = lenders.map(lender => ({
                 label: lender,
                 data: labels.map(date => {
-                    const e = productData.find(d => d.date === date && d.lender.trim() === lender);
+                    const e = productData.find(d => d.date === date && d.lender.trim().toLowerCase() === lender.toLowerCase());
+                    // Force numeric conversion to ensure Chart.js can plot it
                     return e ? { x: date, y: parseFloat(e.rate), apr: parseFloat(e.apr), points: parseFloat(e.points) } : null;
                 }),
-                borderColor: colors[lender], backgroundColor: colors[lender],
-                tension: 0.3, borderWidth: 2, spanGaps: true, pointRadius: 5
+                borderColor: colors[lender], 
+                backgroundColor: colors[lender],
+                tension: 0.3, 
+                borderWidth: 2, 
+                spanGaps: true, 
+                pointRadius: 6, // Larger dots ensure single points are visible
+                pointBackgroundColor: colors[lender],
+                pointBorderColor: colors[lender]
             }));
             chart.update();
         }
 
-        // --- FEED LOGIC ---
+        // --- PERSISTENCE & FEEDS ---
+        async function toggleRead(link, read, div) {
+            if (read) { if(!userReadList.includes(link)) userReadList.push(link); }
+            else { userReadList = userReadList.filter(l => l !== link); }
+            div.classList.toggle('read', read);
+            if(auth.currentUser) await setDoc(doc(db, 'tasks', `prefs_${auth.currentUser.uid}`), { readArticles: userReadList }, { merge: true });
+        }
+
         async function fetchRSS(feedId, url) {
-            const container = document.getElementById(feedId); container.innerHTML = '<p>Syncing...</p>';
+            const container = document.getElementById(feedId);
+            container.innerHTML = '<p>Syncing...</p>';
             try {
                 const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`);
-                const data = await r.json(); container.innerHTML = '';
+                const data = await r.json();
+                container.innerHTML = '';
                 data.items.slice(0, 12).forEach(i => {
-                    const link = i.link.split('?')[0]; const isRead = userReadList.includes(link);
-                    const div = document.createElement('div'); div.className = `card news-card ${isRead ? 'read' : ''}`;
+                    const link = i.link.split('?')[0];
+                    const isRead = userReadList.includes(link);
+                    const div = document.createElement('div');
+                    div.className = `card news-card ${isRead ? 'read' : ''}`;
                     div.innerHTML = `<div><b>${i.title}</b></div><label class="read-toggle"><input type="checkbox" ${isRead?'checked':''}> Read</label>`;
                     div.onclick = (e) => { if(!e.target.closest('.read-toggle')) window.open(link, '_blank'); };
-                    div.querySelector('input').onchange = async (e) => {
-                        if(e.target.checked) userReadList.push(link); else userReadList = userReadList.filter(l => l !== link);
-                        div.classList.toggle('read', e.target.checked);
-                        if(auth.currentUser) await setDoc(doc(db, 'tasks', `prefs_${auth.currentUser.uid}`), { readArticles: userReadList }, { merge: true });
-                    };
+                    div.querySelector('input').onchange = (e) => toggleRead(link, e.target.checked, div);
                     container.appendChild(div);
                 });
             } catch(e) { container.innerHTML = '<p>Signal blocked.</p>'; }
@@ -198,14 +246,17 @@
         window.fetchAP = () => fetchRSS('news-container', 'https://apnews.com/hub/ap-top-news.rss');
         window.fetchFreebies = () => fetchRSS('freebies-container', 'https://www.reddit.com/r/freebies/.rss');
 
-        // --- KANBAN LOGIC ---
+        // --- KANBAN & INITIALIZATION ---
         function initSortable() {
             ['todo', 'doing', 'done'].forEach(st => {
                 new Sortable(document.getElementById(`${st}-list`), {
-                    group: 'kanban', animation: 150, onStart: () => { isDragging = true; },
+                    group: 'kanban', animation: 150,
+                    onStart: () => { isDragging = true; },
                     onEnd: async (e) => {
-                        isDragging = false; const taskId = e.item.getAttribute('data-id');
-                        await updateDoc(doc(db, 'tasks', taskId), { status: e.to.id.split('-')[0] });
+                        isDragging = false;
+                        const taskId = e.item.getAttribute('data-id');
+                        const status = e.to.id.split('-')[0];
+                        await updateDoc(doc(db, 'tasks', taskId), { status });
                     }
                 });
             });
@@ -216,32 +267,46 @@
             ['todo','doing','done'].forEach(st => {
                 const list = document.getElementById(`${st}-list`); list.innerHTML = '';
                 s.docs.filter(d => d.data().status === st && !d.id.startsWith('prefs_')).forEach(d => {
-                    const t = d.data(); const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
+                    const t = d.data();
+                    const card = document.createElement('div'); card.className = 'card'; card.setAttribute('data-id', d.id);
                     card.innerHTML = `<div class="badge badge-${t.label || 'none'}">${t.label || ''}</div><div>${t.text}</div>`;
-                    card.onclick = () => { curTaskId = d.id; document.getElementById('modal-title-display').value = t.text; document.getElementById('modal-notes').value = t.notes || ''; document.getElementById('modal-label-select').value = t.label || 'none'; document.getElementById('editor-modal').style.display = 'flex'; };
+                    card.onclick = () => {
+                        curTaskId = d.id;
+                        document.getElementById('modal-title-display').value = t.text;
+                        document.getElementById('modal-notes').value = t.notes || '';
+                        document.getElementById('modal-label-select').value = t.label || 'none';
+                        document.getElementById('editor-modal').style.display = 'flex';
+                    };
                     list.appendChild(card);
                 });
             });
         });
 
-        // --- AUTH & DATA ---
+        onSnapshot(collection(db, "wiki"), (s) => {
+            const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
+            s.docs.forEach(d => {
+                const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = `📄 ${d.data().title}`;
+                btn.onclick = () => {
+                    document.getElementById('wiki-title-display').value = d.data().title;
+                    document.getElementById('wiki-preview').innerHTML = marked.parse(d.data().content || '');
+                    window.showView('wiki-content-view');
+                };
+                sList.appendChild(btn);
+            });
+        });
+
         onAuthStateChanged(auth, async (u) => {
             if(u) { 
                 document.getElementById('login-screen').style.display='none'; 
+                // CRITICAL: Pull Read Status FIRST
                 const prefDoc = await getDoc(doc(db, 'tasks', `prefs_${u.uid}`));
                 if (prefDoc.exists()) userReadList = prefDoc.data().readArticles || [];
+                
                 initRateCharts(); initSortable(); window.fetchAP(); window.fetchFreebies();
                 onSnapshot(query(collection(db, "mortgage_rates"), orderBy("date", "asc")), (snap) => {
                     const data = snap.docs.map(doc => doc.data());
-                    updateChart(convChart, data, "30yr Conv"); updateChart(vaChart, data, "30yr VA");
-                });
-                onSnapshot(collection(db, "wiki"), (s) => {
-                    const sList = document.getElementById('sidebar-wiki-list'); sList.innerHTML = '';
-                    s.docs.forEach(d => {
-                        const btn = document.createElement('button'); btn.className = 'nav-item'; btn.innerText = `📄 ${d.data().title}`;
-                        btn.onclick = () => { document.getElementById('wiki-title-display').value = d.data().title; document.getElementById('wiki-preview').innerHTML = marked.parse(d.data().content || ''); window.showView('wiki-content-view'); };
-                        sList.appendChild(btn);
-                    });
+                    updateChart(convChart, data, "30yr Conv");
+                    updateChart(vaChart, data, "30yr VA");
                 });
             } else { document.getElementById('login-screen').style.display='flex'; }
         });
@@ -249,11 +314,20 @@
         document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
         document.getElementById('close-modal').onclick = () => document.getElementById('editor-modal').style.display='none';
+        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
+
+        window.showView = (vid) => {
+            document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none');
+            document.getElementById(vid).style.display = 'flex';
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('active');
+                if(n.getAttribute('data-view') === vid) n.classList.add('active');
+            });
+        };
+        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => showView(b.getAttribute('data-view')));
+
         document.getElementById('modal-label-select').onchange = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { label: e.target.value }); };
         document.getElementById('modal-notes').oninput = (e) => { if(curTaskId) updateDoc(doc(db, 'tasks', curTaskId), { notes: e.target.value }); };
-        document.getElementById('add-btn').onclick = () => { const t = prompt("Task?"); if(t) addDoc(collection(db, "tasks"), { text: t, status: 'todo', label: 'none' }); };
-        window.showView = (vid) => { document.querySelectorAll('.view-pane').forEach(p => p.style.display = 'none'); document.getElementById(vid).style.display = 'flex'; document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); if(n.getAttribute('data-view') === vid) n.classList.add('active'); }); };
-        document.querySelectorAll('.nav-item[data-view]').forEach(b => b.onclick = () => showView(b.getAttribute('data-view')));
     </script>
 </body>
 </html>
