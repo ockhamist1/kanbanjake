@@ -9,7 +9,7 @@ if (!admin.apps.length) { admin.initializeApp({ credential: admin.credential.cer
 const db = admin.firestore();
 
 const format3 = (val) => parseFloat(Number(val).toFixed(3));
-const isSaneRate = (val) => val >= 4.0 && val <= 9.5;
+const isSaneRate = (val) => val >= 4.0 && val <= 9.0;
 
 async function run() {
     const today = new Date().toISOString().split('T')[0];
@@ -32,7 +32,7 @@ async function run() {
             const response = await axios.get(proxyUrl, { timeout: 90000 });
             let rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
 
-            // Clean text: remove scripts/styles but keep the layout mostly flat
+            // Clean text version for standard table scraping
             const cleanText = rawData
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
@@ -45,35 +45,47 @@ async function run() {
             ];
 
             for (const conf of configs) {
-                // Look for keywords and grab the next 1000 characters (ignoring cell boundaries)
+                let rate = 0, apr = 0, points = 0;
+
+                // 1. TRY STANDARD SEARCH (Table View)
                 const regex = new RegExp(`(${conf.keys.join('|')})(.{1,1000})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[2];
-                    // Look for all numbers (integers or decimals)
                     const decimals = block.match(/(\d+(?:\.\d+)?)/g);
-                    
                     if (decimals) {
                         const nums = decimals.map(n => parseFloat(n));
-                        // Find the interest rate first
-                        const rate = nums.find(n => isSaneRate(n));
-                        
+                        rate = nums.find(n => isSaneRate(n));
                         if (rate) {
-                            // APR: The next rate-like number in the block
-                            const apr = nums.find(n => isSaneRate(n) && n !== rate) || (rate + 0.21);
-                            
-                            // Points: The smallest decimal in the block (usually < 3.0)
-                            const points = nums.find(n => n > 0 && n < 3.5 && n !== rate && n !== apr) || 0;
-                            
-                            results.push({
-                                lender: lender.name, product: conf.id, date: today,
-                                rate: format3(rate), apr: format3(apr), points: format3(points),
-                                timestamp: admin.firestore.FieldValue.serverTimestamp()
-                            });
-                            console.log(`      ✅ FOUND ${lender.name} ${conf.id}: ${rate.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
+                            apr = nums.find(n => n > rate && n < rate + 1.2) || (rate + 0.22);
+                            points = nums.find(n => n > 0 && n < 3.5 && n !== rate && n !== apr) || 0;
                         }
                     }
+                }
+
+                // 2. IF FAILED, TRY JSON-KEY SEARCH (For Rocket/Modern Apps)
+                if (!rate) {
+                    // Look for patterns like "30-Year Fixed","rate":6.125
+                    const jsonRegex = new RegExp(`(?:${conf.keys.join('|')})[^}]*?rate["\\s:]+([4-9]\\.\\d+)`, 'i');
+                    const jsonMatch = rawData.match(jsonRegex);
+                    if (jsonMatch) {
+                        rate = parseFloat(jsonMatch[1]);
+                        const ptsMatch = rawData.substring(jsonMatch.index, jsonMatch.index + 500).match(/points["\\s:]+([0-3]\\.\\d+)/i);
+                        points = ptsMatch ? parseFloat(ptsMatch[1]) : 0;
+                        apr = rate + 0.25;
+                    }
+                }
+
+                if (rate) {
+                    results.push({
+                        lender: lender.name, product: conf.id, date: today,
+                        rate: format3(rate), apr: format3(apr), points: format3(points),
+                        timestamp: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log(`      ✅ FOUND ${lender.name} ${conf.id}: ${rate.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
+                } else {
+                    console.log(`      ⚠️ No data found for ${lender.name} ${conf.id}`);
                 }
             }
             await new Promise(resolve => setTimeout(resolve, 3000));
@@ -92,8 +104,6 @@ async function run() {
         });
         await batch.commit();
         console.log(">>> UPDATE COMPLETE.");
-    } else {
-        console.log(">>> No rates found in the data received.");
     }
 }
 
