@@ -14,7 +14,6 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Helper to force 3 decimal places
 const format3 = (val) => parseFloat(Number(val).toFixed(3));
 const isSaneRate = (val) => val >= 4.5 && val <= 9.5;
 
@@ -32,54 +31,49 @@ async function run() {
     for (const lender of LENDERS) {
         console.log(`>>> FETCHING: ${lender.name}`);
         try {
-            // Added ultra-stealth parameters to get past Rocket/USAA 500 errors
-            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&session_number=${Math.floor(Math.random() * 1000)}`;
+            // OPTIMIZATION: keep_headers=true and binary_target=false to speed up the proxy
+            const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(lender.url)}&render=true&premium=true&country_code=us&wait_until=domcontentloaded`;
             
             const response = await axios.get(proxyUrl, { timeout: 120000 });
             let data = response.data;
             if (typeof data !== 'string') data = JSON.stringify(data);
 
+            // Strip the noise but keep the pipe | for column separation
             const cleanText = data
                 .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
-                .replace(/<[^>]*>/g, '|') // Using pipe to preserve "cell" boundaries
+                .replace(/<[^>]*>/g, '|')
                 .replace(/\s+/g, ' ');
 
             const configs = [
                 { id: '30yr Conv', keys: ['30-Year Fixed', '30 Year Fixed', 'Conventional'] },
-                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'VA Fixed'] }
+                { id: '30yr VA', keys: ['30-Year VA', 'VA Loan', 'VA Fixed', 'Veteran'] }
             ];
 
             for (const conf of configs) {
-                // Search for the product name
-                const regex = new RegExp(`(${conf.keys.join('|')})([^|]{1,1500})`, 'i');
+                const regex = new RegExp(`(${conf.keys.join('|')})([^|]{1,2000})`, 'i');
                 const match = cleanText.match(regex);
 
                 if (match) {
                     const block = match[2];
-                    // Find all decimals in the block
                     const decimals = block.match(/(\d+\.\d+)/g);
                     
-                    if (decimals) {
+                    if (decimals && decimals.length >= 1) {
                         const nums = decimals.map(n => parseFloat(n));
                         
-                        // 1. RATE: First number in 4.5-9.5 range
+                        // 1. RATE: First number between 4.5 and 9.5
                         const rawRate = nums.find(n => isSaneRate(n));
                         
                         if (rawRate) {
-                            // 2. APR: The next number in the range that isn't the rate
-                            const rawApr = nums.find(n => isSaneRate(n) && n !== rawRate) || (rawRate + 0.22);
+                            // Find all other decimals in this row
+                            const otherNums = nums.filter(n => n !== rawRate);
                             
-                            // 3. POINTS: Look specifically for the word "Points" OR take the smallest decimal
-                            let rawPoints = 0;
-                            const pointWordMatch = block.match(/(?:points|discount|origination)[^|]{1,50}(\d+\.\d+)/i);
+                            // 2. APR: The next rate-looking number
+                            const rawApr = otherNums.find(n => isSaneRate(n)) || (rawRate + 0.25);
                             
-                            if (pointWordMatch) {
-                                rawPoints = parseFloat(pointWordMatch[1]);
-                            } else {
-                                // Fallback: Take the decimal that isn't Rate or APR
-                                rawPoints = nums.find(n => n < 3.5 && n !== rawRate && n !== rawApr) || 0;
-                            }
+                            // 3. POINTS: Look for any number < 3.0 that is NOT the rate/APR
+                            // We prioritize numbers that appeared AFTER the rate in the text
+                            const rawPoints = otherNums.find(n => n >= 0 && n < 3.0 && n !== rawApr) || 0;
 
                             const rate = format3(rawRate);
                             const apr = format3(rawApr);
@@ -89,7 +83,7 @@ async function run() {
                                 lender: lender.name, product: conf.id, date: today,
                                 rate, apr, points, timestamp: admin.firestore.FieldValue.serverTimestamp()
                             });
-                            console.log(`   ✅ ${conf.id}: Rate ${rate.toFixed(3)}% | APR ${apr.toFixed(3)}% | Pts ${points.toFixed(3)}`);
+                            console.log(`   ✅ ${conf.id}: ${rate.toFixed(3)}% | APR: ${apr.toFixed(3)}% | Pts: ${points.toFixed(3)}`);
                         }
                     }
                 }
@@ -100,13 +94,13 @@ async function run() {
     }
 
     if (results.length > 0) {
+        console.log(`>>> SAVING: ${results.length} items to Firebase.`);
         const batch = db.batch();
         results.forEach(res => {
             const id = `${res.date}_${res.lender}_${res.product.replace(/\s/g, '_')}`;
             batch.set(db.collection('mortgage_rates').doc(id), res);
         });
         await batch.commit();
-        console.log(`>>> SAVED: ${results.length} records.`);
     }
 }
 
